@@ -65,6 +65,8 @@ Data files are hosted on Hugging Face:
 | `morris_snp_celllevel_effects_2361.h5` | Cell-level perturbation effects (SNP) | 34 MB |
 | `k562_gene_embeddings_aligned.h5` | Gene embeddings from scGPT | 4.4 MB |
 | `cdt_morris_celllevel_best.pt` | Trained model weights | 80 MB |
+| `morris_28genes_enformer.h5` | Enformer embeddings for 28 TSS genes | 277 MB |
+| `morris_snp_enformer.h5` | Enformer embeddings for SNP loci | 4.8 GB |
 
 ### Quick Start
 
@@ -83,7 +85,7 @@ model_path = hf_hub_download(
 )
 ```
 
-**Note**: Enformer embeddings (`morris_28genes_enformer.h5`, `morris_snp_enformer.h5`) must be generated using the embeddings notebooks on Colab (requires GPU).
+All files including Enformer embeddings are available on Hugging Face and will be downloaded automatically by the notebooks.
 
 ## Requirements
 
