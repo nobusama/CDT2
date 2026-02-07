@@ -83,7 +83,7 @@ After cross-attention, a Virtual Cell Embedding (VCE)\textsuperscript{8} module 
 
 The dataset comprised 15,657 K562 cells from the CRISPRi screen\textsuperscript{10}: 8,250 cells from TSS perturbations (27 genes) and 7,407 cells from SNP perturbations (420 loci). Of these, 13,620 cells were used for training and 2,037 cells were reserved for validation. Training included 6,213 TSS cells (22 genes) and all 7,407 SNP cells. Validation comprised five genes held out entirely at the gene level: \textit{GFI}1\textit{B}, \textit{CD}52, \textit{TFRC}, \textit{CD}44, and \textit{TNFSF}9. This gene-level holdout ensures that validation performance reflects generalization to entirely unseen perturbation targets---a stringent test of the model's ability to learn transferable regulatory patterns rather than memorize gene-specific effects.
 
-The AI microscope framework assigns distinct roles to each component: prediction accuracy is the focus adjustment, the gene set is the objective lens, and attention maps are the image. This framing structures the subsequent analyses: we first validate the lens quality through ablation (Fig.~2), confirm proper focus through prediction performance (Fig.~3), and then examine what the microscope reveals (Fig.~4--5).
+The AI microscope framework assigns distinct roles to each component: prediction accuracy is the focus adjustment, the gene set is the objective lens, and attention maps are the image. This framing structures the subsequent analyses: we first validate the lens quality through ablation (Fig.~2), confirm proper focus through prediction performance (Fig.~3), and then examine what the microscope reveals (Fig.~4--6).
 
 % Figure 1
 \begin{figure}[H]
@@ -144,7 +144,7 @@ Trans-target prediction provided a stringent test of CDT-II's ability to capture
 \centering
 \includegraphics[width=0.80\textwidth]{../figures/main/fig3c_trans_effect_gfi1b.png}
 
-\caption{\textbf{CDT-II predicts cell-level perturbation effects.} \textbf{(A)} Overall scatter plot of predicted versus actual log2 fold changes across all validation cells ($n=2{,}037$ cells $\times$ 2,361 genes), showing Pearson $r=0.64$. Each point represents a cell-gene pair, with density indicated by color intensity. \textbf{(B)} Per-gene prediction performance for five validation genes (\textit{GFI}1\textit{B}, \textit{TNFSF}9, \textit{TFRC}, \textit{CD}44, \textit{CD}52), with individual cell-level correlations ranging from 0.64 to 0.86 (mean $r=0.84$). \textbf{(C)} Trans-effect profile for \textit{GFI}1\textit{B}: mean predicted versus mean actual effects across all 2,361 genes, showing strong recovery of the perturbation-specific regulatory signature ($r=0.86$).}
+\caption{\textbf{CDT-II predicts cell-level perturbation effects.} \textbf{(A)} Overall scatter plot of predicted versus actual log2 fold changes across all validation cells ($n=2{,}037$ cells $\times$ 2,361 genes), showing Pearson $r=0.64$. Each point represents a cell-gene pair, with density indicated by color intensity. \textbf{(B)} Per-gene prediction performance for five validation genes (\textit{GFI}1\textit{B}, \textit{TNFSF}9, \textit{TFRC}, \textit{CD}44, \textit{CD}52), with pseudo-bulk correlations (mean across cells) ranging from 0.64 to 0.86 (mean $r=0.84$). \textbf{(C)} Trans-effect profile for \textit{GFI}1\textit{B}: mean predicted versus mean actual effects across all 2,361 genes, showing strong recovery of the perturbation-specific regulatory signature ($r=0.86$).}
 \label{fig:prediction}
 \end{figure}
 
@@ -264,7 +264,7 @@ The smooth learning dynamics observed during training provide additional evidenc
 
 A notable feature of CDT-II is its architectural simplicity. The model uses only standard transformer components---self-attention, cross-attention, and feed-forward layers---without specialized modules, custom loss functions, or complex training procedures. This simplicity is deliberate: by constraining the architecture to mirror the central dogma rather than adding complexity, each attention mechanism retains a clear biological interpretation. In contrast, more complex architectures often sacrifice interpretability for marginal performance gains. CDT-II demonstrates that biological insight can emerge from standard components when they are structured to reflect biological organization.
 
-Several limitations should be noted. The overall validation correlation ($r = 0.64$), while below unity, approaches the empirical reproducibility ceiling observed across independent CRISPRi studies---Morris et al. reported that only $\sim$56\% of \textit{GFI}1\textit{B} trans-targets replicated between their STING-seq screen and an independent CRISPRi study by Gasperini et al.\textsuperscript{10,12}, suggesting that the remaining prediction gap reflects irreducible experimental variability rather than model limitations. While in silico knockdown experiments---setting gene expression to zero---yielded weak correlations ($r \approx 0.07$), this reflects the challenge of extrapolating far outside the training distribution rather than a failure to learn regulatory relationships. In contrast, gradient-based attribution ($\partial \text{output}_j / \partial \text{input}_i$), which measures local sensitivity within the training distribution, achieved $r = 0.83$ correlation with experimental effect sizes. This demonstrates that CDT-II accurately captures regulatory relationships when queried appropriately, and suggests that gradient-based virtual screening---predicting the direction and relative magnitude of perturbation effects---may be more practical than simulating complete knockdowns. The 2,361-gene set excludes some known \textit{GFI}1\textit{B} targets (\textit{INSIG}1, \textit{NPM}1, \textit{BNIP}3), and all experiments were conducted in K562 cells from a single dataset. Finally, attention weights require careful interpretation\textsuperscript{22,23}; we mitigate this concern through external validation (6.6-fold enrichment) rather than relying on attention as post-hoc explanation, but attention should not be interpreted as causal without experimental follow-up.
+Several limitations should be noted. The overall validation correlation ($r = 0.64$), while below unity, approaches the empirical reproducibility ceiling observed across independent CRISPRi studies---Morris et al. reported that only $\sim$56\% of \textit{GFI}1\textit{B} trans-targets replicated between their STING-seq screen and an independent CRISPRi study by Gasperini et al.\textsuperscript{10,12}, suggesting that the remaining prediction gap reflects irreducible experimental variability rather than model limitations. While in silico knockdown experiments---setting gene expression to zero---yielded weak correlations ($r \approx 0.07$), this reflects the challenge of extrapolating far outside the training distribution rather than a failure to learn regulatory relationships. In contrast, gradient-based attribution ($\partial \text{output}_j / \partial \text{input}_i$), which measures local sensitivity within the training distribution, achieved $r = 0.83$ correlation with experimental effect sizes. This demonstrates that CDT-II accurately captures regulatory relationships when queried appropriately, and suggests that gradient-based virtual screening---predicting the direction and relative magnitude of perturbation effects---may be more practical than simulating complete knockdowns. The 2,361-gene set excludes some known \textit{GFI}1\textit{B} targets (\textit{INSIG}1, \textit{NPM}1, \textit{BNIP}3), and all experiments were conducted in K562 cells from a single dataset. Finally, attention weights require careful interpretation\textsuperscript{20,21}; we mitigate this concern through external validation (6.6-fold enrichment) rather than relying on attention as post-hoc explanation, but attention should not be interpreted as causal without experimental follow-up.
 
 Looking ahead, CDT-II opens several avenues for biological discovery. First, gradient-based virtual screening ($r = 0.83$ with experimental effects) could enable computational prioritization of perturbation experiments: by computing input gradients for any genomic locus in a trained model, researchers could rank regulatory targets by predicted effect magnitude before committing experimental resources. Second, extension to multiple cell types would test whether regulatory networks are cell-type-specific or conserved, potentially revealing shared regulatory modules across lineages. Third, integration of additional modalities---scATAC-seq for chromatin accessibility, DNA methylation for epigenetic state, or spatial transcriptomics for tissue context---could further sharpen the microscope's resolution by providing the model with richer cellular context. Finally, because CDT-II learns from perturbation data rather than observational correlations, it may capture causal regulatory relationships that could inform therapeutic target identification in disease contexts.
 
@@ -298,7 +298,7 @@ CDT-II was trained to minimize mean squared error (MSE) between predicted and ob
 \begin{equation}
 \mathcal{L} = \frac{1}{|\mathcal{B}|} \sum_{c \in \mathcal{B}} \frac{1}{G} \sum_{g=1}^{G} (\hat{y}_{cg} - y_{cg})^2
 \end{equation}
-where $\hat{y}_{cg}$ is the predicted log2 fold change for gene $g$ in cell $c$, $y_{cg}$ is the observed value, $G = 2{,}361$, and $\mathcal{B}$ is a mini-batch. We used the AdamW\textsuperscript{20} optimizer (learning rate $1 \times 10^{-4}$, weight decay $1 \times 10^{-5}$) with ReduceLROnPlateau scheduling (factor 0.5, patience 10 epochs, monitoring validation loss). Gradient norms were clipped to a maximum of 1.0. Batch size was 64. Training was performed on a single NVIDIA A100 GPU (40 GB).
+where $\hat{y}_{cg}$ is the predicted log2 fold change for gene $g$ in cell $c$, $y_{cg}$ is the observed value, $G = 2{,}361$, and $\mathcal{B}$ is a mini-batch. We used the AdamW\textsuperscript{18} optimizer (learning rate $1 \times 10^{-4}$, weight decay $1 \times 10^{-5}$) with ReduceLROnPlateau scheduling (factor 0.5, patience 10 epochs, monitoring validation loss). Gradient norms were clipped to a maximum of 1.0. Batch size was 64. Training was performed on a single NVIDIA A100 GPU (40 GB).
 
 \subsection*{Attention map extraction}
 
@@ -312,7 +312,7 @@ where $\hat{y}_{cg}$ is the predicted log2 fold change for gene $g$ in cell $c$,
 
 \textbf{Community detection.} Louvain community detection\textsuperscript{14} was applied to identify modules of co-regulated genes. For RNA self-attention, this yielded 5 communities; for cross-attention similarity, 53 communities (reflecting finer-grained structure).
 
-\textbf{GO enrichment.} Gene Ontology\textsuperscript{15} and pathway enrichment was performed using the Enrichr\textsuperscript{21} API against Gene Ontology Molecular Function, KEGG\textsuperscript{17}, and Reactome\textsuperscript{16} databases. $P$ values were corrected for multiple testing.
+\textbf{GO enrichment.} Gene Ontology\textsuperscript{15} and pathway enrichment was performed using the Enrichr\textsuperscript{19} API against Gene Ontology Molecular Function, KEGG\textsuperscript{17}, and Reactome\textsuperscript{16} databases. $P$ values were corrected for multiple testing.
 
 \textbf{Hypergeometric test.} Overlap between top $N$ attention-ranked genes and top $N$ experimentally ranked genes (by absolute mean log2FC upon \textit{GFI}1\textit{B} perturbation) was evaluated using the hypergeometric test: $P(X \geq k)$ where $M = 2{,}361$ (universe), $K = N$ (top experimental targets), $n = N$ (top attention targets), and $k$ = observed overlap. The enrichment fold change was computed as $k / (N^2 / M)$. This symmetric comparison avoids the need to define an arbitrary significance threshold for ``known targets.''
 
@@ -326,7 +326,7 @@ Two principal training configurations were compared. The full gene set configura
 
 \subsection*{Code and data availability}
 
-CDT-II source code is available at [GitHub repository URL TBD]. The STING-seq v2 dataset is available from the original publication\textsuperscript{10}. Enformer embeddings and processed training data will be deposited at [repository TBD]. CDT v1 is described in ref.~8.
+CDT-II source code is available at https://github.com/nobusama/CDT2. The STING-seq v2 dataset is available from the original publication\textsuperscript{10}. Enformer embeddings and processed training data will be deposited upon publication. CDT v1 is described in ref.~8.
 
 \section*{References}
 
@@ -349,8 +349,6 @@ CDT-II source code is available at [GitHub repository URL TBD]. The STING-seq v2
 \item Ashburner, M. et al. Gene ontology: tool for the unification of biology. \textit{Nat. Genet.} \textbf{25}, 25--29 (2000).
 \item Jassal, B. et al. The reactome pathway knowledgebase. \textit{Nucleic Acids Res.} \textbf{48}, D498--D503 (2020).
 \item Kanehisa, M. \& Goto, S. KEGG: Kyoto encyclopedia of genes and genomes. \textit{Nucleic Acids Res.} \textbf{28}, 27--30 (2000).
-\item Stoeckius, M. et al. Simultaneous epitope and transcriptome measurement in single cells. \textit{Nat. Methods} \textbf{14}, 865--868 (2017).
-\item Schwanh\"ausser, B. et al. Global quantification of mammalian gene expression control. \textit{Nature} \textbf{473}, 337--342 (2011).
 \item Loshchilov, I. \& Hutter, F. Decoupled weight decay regularization. In \textit{Proc. ICLR} (2019).
 \item Kuleshov, M. V. et al. Enrichr: a comprehensive gene set enrichment analysis web server 2016 update. \textit{Nucleic Acids Res.} \textbf{44}, W90--W97 (2016).
 \item Jain, S. \& Wallace, B. C. Attention is not explanation. In \textit{Proc. NAACL-HLT} 3543--3556 (2019).
@@ -358,12 +356,12 @@ CDT-II source code is available at [GitHub repository URL TBD]. The STING-seq v2
 \end{enumerate}
 
 \section*{Acknowledgements}
-[TBD]
+The author thanks the developers of Enformer, the Morris laboratory for making the STING-seq dataset publicly available, and the open-source communities behind PyTorch and related tools.
 
 \section*{Author contributions}
-[TBD]
+N.O. conceived the study, developed the model, performed all analyses, and wrote the manuscript.
 
 \section*{Competing interests}
-The authors declare no competing interests.
+The author declares no competing interests.
 
 \end{document}
