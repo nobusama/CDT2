@@ -33,21 +33,31 @@ CDT-II is an "AI microscope" whose attention maps are directly interpretable as 
 
 ```
 CDT2/
-├── cdt/                    # Model code
-│   ├── models/             # CDT-II architecture
-│   ├── data/               # Data loading utilities
-│   ├── training/           # Training scripts
-│   └── interpretability/   # Attention extraction
-├── docs/                   # Paper manuscript
-├── figures/                # Figures
-└── notebooks/              # Analysis notebooks
+├── docs/                   # Paper manuscript (.tex, .pdf)
+├── figures/main/           # All figures
+└── notebooks/
+    ├── training/           # Model training
+    │   └── CDT_Morris_CRISPRi_CellLevel_Training.ipynb
+    └── analysis/           # Results analysis
+        ├── CDT_Morris_Prediction_Analysis.ipynb
+        ├── CDT_Morris_Attention_Analysis.ipynb
+        └── CDT_Morris_Network_Discovery.ipynb
 ```
+
+## Notebooks
+
+| Notebook | Description |
+|----------|-------------|
+| `CellLevel_Training` | CDT-II model training on Morris STING-seq data |
+| `Prediction_Analysis` | Per-gene prediction performance (r=0.84) |
+| `Attention_Analysis` | GFI1B regulatory network from attention maps |
+| `Network_Discovery` | Convergent RNA processing module discovery |
 
 ## Requirements
 
 - Python 3.9+
 - PyTorch 2.0+
-- See `requirements.txt` for full dependencies
+- Google Colab (recommended for training)
 
 ## Citation
 
