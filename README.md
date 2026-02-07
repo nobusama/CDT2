@@ -53,11 +53,44 @@ CDT2/
 | `Attention_Analysis` | GFI1B regulatory network from attention maps |
 | `Network_Discovery` | Convergent RNA processing module discovery |
 
+## Data
+
+Data files are hosted on Hugging Face:
+
+**[nobusama17/CDT2-data](https://huggingface.co/datasets/nobusama17/CDT2-data)**
+
+| File | Description | Size |
+|------|-------------|------|
+| `morris_celllevel_effects_2361.h5` | Cell-level perturbation effects (TSS) | 41 MB |
+| `morris_snp_celllevel_effects_2361.h5` | Cell-level perturbation effects (SNP) | 34 MB |
+| `k562_gene_embeddings_aligned.h5` | Gene embeddings from scGPT | 4.4 MB |
+| `cdt_morris_celllevel_best.pt` | Trained model weights | 80 MB |
+
+### Quick Start
+
+The analysis notebooks automatically download data from Hugging Face when running locally:
+
+```python
+# Notebooks detect environment and download data automatically
+# On Colab: uses Google Drive
+# Locally: downloads from Hugging Face
+
+from huggingface_hub import hf_hub_download
+model_path = hf_hub_download(
+    repo_id="nobusama17/CDT2-data",
+    filename="cdt_morris_celllevel_best.pt",
+    repo_type="dataset"
+)
+```
+
+**Note**: Enformer embeddings (`morris_28genes_enformer.h5`, `morris_snp_enformer.h5`) must be generated using the embeddings notebooks on Colab (requires GPU).
+
 ## Requirements
 
 - Python 3.9+
 - PyTorch 2.0+
-- Google Colab (recommended for training)
+- huggingface_hub
+- Google Colab (recommended for training and Enformer embedding generation)
 
 ## Citation
 
