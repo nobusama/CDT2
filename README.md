@@ -10,6 +10,10 @@ CDT-II is an "AI microscope" whose attention maps are directly interpretable as 
 - **RNA self-attention**: Gene co-regulation
 - **DNA-to-RNA cross-attention**: Transcriptional control
 
+![CDT-II Architecture](figures/main/fig1_CDTv2_architecture.png)
+
+**Figure 1.** CDT-II architecture and interpretable attention maps. The model processes genomic DNA (via Enformer) and per-cell RNA expression, producing attention maps that directly correspond to biological relationships.
+
 ## Key Results
 
 | Metric | Value |
