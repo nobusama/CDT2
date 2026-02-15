@@ -26,7 +26,7 @@ CDT-II is an "AI microscope" whose attention maps are directly interpretable as 
 
 ## Paper
 
-- **Preprint**: [bioRxiv](https://www.biorxiv.org/) (coming soon)
+- **CDT-II**: [arXiv:2602.08751](https://arxiv.org/abs/2602.08751)
 - **CDT v1**: [arXiv:2601.01089](https://arxiv.org/abs/2601.01089)
 
 ## Repository Structure
@@ -97,11 +97,11 @@ All files including Enformer embeddings are available on Hugging Face and will b
 ## Citation
 
 ```bibtex
-@article{ota2025cdtii,
+@article{ota2026cdtii,
   title={Central Dogma Transformer II: An AI Microscope for Understanding Cellular Regulatory Mechanisms},
   author={Ota, Nobuyuki},
-  journal={bioRxiv},
-  year={2025}
+  journal={arXiv preprint arXiv:2602.08751},
+  year={2026}
 }
 ```
 
