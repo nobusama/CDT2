@@ -2,6 +2,8 @@
 
 **An AI Microscope for Understanding Cellular Regulatory Mechanisms**
 
+[![arXiv](https://img.shields.io/badge/arXiv-2602.08751-b31b1b.svg)](https://arxiv.org/abs/2602.08751)
+
 ## Overview
 
 CDT-II is an "AI microscope" whose attention maps are directly interpretable as regulatory structure. By mirroring the central dogma in its architecture, each attention mechanism corresponds to a specific biological relationship:
