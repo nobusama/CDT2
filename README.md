@@ -96,6 +96,13 @@ All files including Enformer embeddings are available on Hugging Face and will b
 - huggingface_hub
 - Google Colab (recommended for training and Enformer embedding generation)
 
+## Future Direction
+
+CDT-III is in early planning. Two key directions are being explored:
+
+- **Epigenomic integration** — Incorporating chromatin accessibility, histone modifications, and DNA methylation into the Central Dogma framework, enabling the model to capture the regulatory layers between genome and transcriptome.
+- **Drug discovery applications** — Extending CDT's interpretable multi-modal architecture toward predicting and understanding drug responses at the cellular level.
+
 ## Citation
 
 ```bibtex
