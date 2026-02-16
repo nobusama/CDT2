@@ -42,7 +42,11 @@ CDT2/
     │   └── CDT_Morris_CRISPRi_CellLevel_Training.ipynb
     └── analysis/           # Results analysis
         ├── CDT_Morris_Prediction_Analysis.ipynb
-        └── CDT_Morris_Attention_Analysis.ipynb
+        ├── CDT_Morris_Attention_Analysis.ipynb
+        ├── fig2_ablation_study.ipynb
+        ├── fig4a_dna_self_attention.ipynb
+        ├── fig5b_go_enrichment.ipynb
+        └── fig6_encode_validation.ipynb
 ```
 
 ## Notebooks
@@ -52,6 +56,10 @@ CDT2/
 | `CellLevel_Training` | CDT-II model training on Morris STING-seq data |
 | `Prediction_Analysis` | Per-gene prediction performance (r=0.84) |
 | `Attention_Analysis` | GFI1B regulatory network from attention maps |
+| `fig2_ablation_study` | Ablation study (Fig 2) |
+| `fig4a_dna_self_attention` | DNA self-attention analysis (Fig 4A) |
+| `fig5b_go_enrichment` | GO enrichment comparison (Fig 5B) |
+| `fig6_encode_validation` | ENCODE validation (Fig 6) |
 
 ## Data
 
