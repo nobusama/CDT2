@@ -42,8 +42,7 @@ CDT2/
     │   └── CDT_Morris_CRISPRi_CellLevel_Training.ipynb
     └── analysis/           # Results analysis
         ├── CDT_Morris_Prediction_Analysis.ipynb
-        ├── CDT_Morris_Attention_Analysis.ipynb
-        └── CDT_Morris_Network_Discovery.ipynb
+        └── CDT_Morris_Attention_Analysis.ipynb
 ```
 
 ## Notebooks
@@ -53,7 +52,6 @@ CDT2/
 | `CellLevel_Training` | CDT-II model training on Morris STING-seq data |
 | `Prediction_Analysis` | Per-gene prediction performance (r=0.84) |
 | `Attention_Analysis` | GFI1B regulatory network from attention maps |
-| `Network_Discovery` | Convergent RNA processing module discovery |
 
 ## Data
 
