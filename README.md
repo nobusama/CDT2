@@ -55,6 +55,8 @@ CDT2/
 
 ## Notebooks
 
+All notebooks are intentionally written as self-contained, top-to-bottom readable code rather than refactored into separate modules. This means you can read each notebook from the first cell to the last and understand the entire pipeline — model architecture, training loop, and analysis — without jumping between files.
+
 | Notebook | Description |
 |----------|-------------|
 | `Morris_28genes_Enformer` | Enformer embedding generation for 28 target gene TSSs |
