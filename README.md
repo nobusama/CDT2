@@ -64,6 +64,31 @@ CDT2/
 | `fig5b_go_enrichment` | GO enrichment comparison (Fig 5B) |
 | `fig6_encode_validation` | ENCODE validation (Fig 6) |
 
+## Using CDT-II with Your Own Data
+
+CDT-II can be applied to any CRISPRi screen with single-cell RNA-seq readout.
+
+### What You Need
+
+1. **CRISPRi perturbation data** — Single-cell RNA-seq with guide assignments (e.g., STING-seq, Perturb-seq, CROP-seq)
+2. **Target gene TSS coordinates** — Chromosome and position (hg38)
+3. **Google Colab with GPU** (recommended) or a local GPU
+
+### Pipeline
+
+| Step | Notebook | What It Does |
+|------|----------|-------------|
+| 1 | `embeddings/Morris_28genes_Enformer.ipynb` | Generate Enformer embeddings for your target gene TSSs |
+| 2 | `training/CDT_Morris_CRISPRi_CellLevel_Training.ipynb` | Train CDT-II on your perturbation data |
+| 3 | `analysis/CDT_Morris_Prediction_Analysis.ipynb` | Evaluate prediction accuracy per gene |
+| 4 | `analysis/CDT_Morris_Attention_Analysis.ipynb` | Extract and interpret attention maps |
+
+### Tips
+
+- Start with the executed notebooks to understand expected outputs
+- Gene filtering by cross-dataset reproducibility improves results (see ablation study: 2,361 filtered genes vs 9,335 unfiltered)
+- Enformer embeddings are cell-type-agnostic — you only need to regenerate them if your target genes differ
+
 ## Data
 
 Data files are hosted on Hugging Face:
