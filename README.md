@@ -109,6 +109,20 @@ val_genes:        [n_val]             # Genes for validation (held out)
 
 The key idea: `cell_expr` is the **input** (cellular state) and `log2fc` is the **output** (perturbation effect). Each cell is a unique sample with its own expression profile.
 
+### Preparing Your Own Data
+
+Starting from a CRISPRi screen with scRNA-seq (e.g., 10x Genomics):
+
+1. **Assign guides to cells** — Use your screen's barcode/guide assignment to label each cell with its perturbation target
+2. **Identify NTC cells** — Non-targeting control cells serve as the baseline
+3. **Normalize expression** — Convert raw UMI counts to CPM (counts per million), then `log1p`: `cell_expr = log(CPM + 1)`
+4. **Compute NTC baseline** — Average expression across all NTC cells: `ntc_mean_expr = mean(NTC_cell_expr, axis=0)`
+5. **Compute log2 fold change** — For each perturbed cell: `log2fc = log2((cell_CPM + 1) / (NTC_mean_CPM + 1))`
+6. **Filter genes** — Keep genes that show reproducible perturbation effects across independent experiments (see ablation study). Quality over quantity.
+7. **Split train/val by gene** — Hold out a few perturbation target genes entirely for validation. CDT-II's power is predicting effects of **unseen** perturbations.
+
+Standard scRNA-seq tools (Scanpy, Seurat) handle steps 1-3. Steps 4-6 are specific to perturbation analysis. See the training notebook for the expected data structure.
+
 ### Tips
 
 - Start with the executed notebooks to understand expected outputs
