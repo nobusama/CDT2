@@ -67,6 +67,58 @@ CDT2/
 | `fig5b_go_enrichment` | GO enrichment comparison (Fig 5B) — reference with executed outputs |
 | `fig6_encode_validation` | ENCODE validation (Fig 6) — reference with executed outputs |
 
+## Quick Start: Reproduce Our Results
+
+You can reproduce the paper's results using the provided Morris STING-seq data in three steps.
+
+### 1. Download data from Hugging Face
+
+Download the following files from **[nobusama17/CDT2-data](https://huggingface.co/datasets/nobusama17/CDT2-data)** and upload them to your Google Drive at `/content/drive/MyDrive/cdt_data/`:
+
+| File | Description | Size |
+|------|-------------|------|
+| `morris_28genes_enformer.h5` | Enformer embeddings for 28 target gene TSSs | 277 MB |
+| `morris_celllevel_effects_2361.h5` | Cell-level perturbation effects (TSS) | 41 MB |
+| `cdt_morris_celllevel_best.pt` | Trained model weights | 80 MB |
+
+Or download programmatically:
+```python
+from huggingface_hub import hf_hub_download
+
+for filename in [
+    "morris_28genes_enformer.h5",
+    "morris_celllevel_effects_2361.h5",
+    "cdt_morris_celllevel_best.pt",
+]:
+    hf_hub_download(
+        repo_id="nobusama17/CDT2-data",
+        filename=filename,
+        repo_type="dataset",
+        local_dir="/content/drive/MyDrive/cdt_data/"
+    )
+```
+
+### 2. Run the analysis notebooks on Google Colab
+
+| Step | Notebook | What You Get |
+|------|----------|-------------|
+| 1 | `analysis/CDT_Morris_Prediction_Analysis.ipynb` | Per-gene prediction accuracy (r=0.84) |
+| 2 | `analysis/CDT_Morris_Attention_Analysis.ipynb` | GFI1B regulatory network, attention maps |
+| 3 | `analysis/CDT_Morris_GFI1B_Subnetwork.ipynb` | Network visualization (Fig 5A) |
+
+The trained model weights are included, so you can skip training and go straight to analysis.
+
+### 3. (Optional) Retrain from scratch
+
+To retrain the model instead of using the provided weights:
+
+| Step | Notebook | What It Does |
+|------|----------|-------------|
+| 1 | `embeddings/Morris_28genes_Enformer.ipynb` | Generate Enformer embeddings (or use provided `morris_28genes_enformer.h5`) |
+| 2 | `training/CDT_Morris_CRISPRi_CellLevel_Training.ipynb` | Train CDT-II model (~30 min on Colab GPU) |
+
+---
+
 ## Using CDT-II with Your Own Data
 
 CDT-II can be applied to any CRISPRi screen with single-cell RNA-seq readout.
@@ -162,20 +214,7 @@ Data files are hosted on Hugging Face:
 | `morris_28genes_enformer.h5` | Enformer embeddings for 28 TSS genes | 277 MB |
 | `morris_snp_enformer.h5` | Enformer embeddings for SNP loci | 4.8 GB |
 
-### Quick Start
-
-The notebooks are designed for **Google Colab** and expect data files on Google Drive at `/content/drive/MyDrive/cdt_data/`. Download files from Hugging Face and upload them to your Google Drive, or use `hf_hub_download`:
-
-```python
-from huggingface_hub import hf_hub_download
-
-# Download a file from Hugging Face
-path = hf_hub_download(
-    repo_id="nobusama17/CDT2-data",
-    filename="cdt_morris_celllevel_best.pt",
-    repo_type="dataset"
-)
-```
+The notebooks are designed for **Google Colab** and expect data files on Google Drive at `/content/drive/MyDrive/cdt_data/`. See [Quick Start](#quick-start-reproduce-our-results) above for setup instructions.
 
 The figure notebooks (fig2, fig4a, fig5b, fig6) are included with **executed outputs for reference** — they show how the paper figures were generated. To regenerate them, you need intermediate data produced by the Attention Analysis notebook.
 
