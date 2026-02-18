@@ -100,9 +100,9 @@ for filename in [
 
 ### 2. Train the model on Google Colab
 
-Open `training/CDT_Morris_CRISPRi_CellLevel_Training.ipynb` in Google Colab and run all cells. This trains CDT-II on the Morris STING-seq data (~30 min on Colab GPU).
+Open `training/CDT_Morris_CRISPRi_CellLevel_Training.ipynb` in Google Colab. Full training requires an A100 GPU with 80GB memory and takes approximately 2 days.
 
-Alternatively, you can skip training and use the provided pre-trained weights (`cdt_morris_celllevel_best.pt`).
+You can also run training partially to observe the learning process, then switch to the provided pre-trained weights (`cdt_morris_celllevel_best.pt`) for analysis.
 
 ### 3. Run the analysis notebooks
 
