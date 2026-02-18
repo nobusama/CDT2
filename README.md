@@ -98,7 +98,13 @@ for filename in [
     )
 ```
 
-### 2. Run the analysis notebooks on Google Colab
+### 2. Train the model on Google Colab
+
+Open `training/CDT_Morris_CRISPRi_CellLevel_Training.ipynb` in Google Colab and run all cells. This trains CDT-II on the Morris STING-seq data (~30 min on Colab GPU).
+
+Alternatively, you can skip training and use the provided pre-trained weights (`cdt_morris_celllevel_best.pt`).
+
+### 3. Run the analysis notebooks
 
 | Step | Notebook | What You Get |
 |------|----------|-------------|
@@ -106,16 +112,11 @@ for filename in [
 | 2 | `analysis/CDT_Morris_Attention_Analysis.ipynb` | GFI1B regulatory network, attention maps |
 | 3 | `analysis/CDT_Morris_GFI1B_Subnetwork.ipynb` | Network visualization (Fig 5A) |
 
-The trained model weights are included, so you can skip training and go straight to analysis.
+### 4. (Optional) Regenerate Enformer embeddings
 
-### 3. (Optional) Retrain from scratch
+The Enformer embeddings are provided in `morris_28genes_enformer.h5`. To regenerate them from scratch:
 
-To retrain the model instead of using the provided weights:
-
-| Step | Notebook | What It Does |
-|------|----------|-------------|
-| 1 | `embeddings/Morris_28genes_Enformer.ipynb` | Generate Enformer embeddings (or use provided `morris_28genes_enformer.h5`) |
-| 2 | `training/CDT_Morris_CRISPRi_CellLevel_Training.ipynb` | Train CDT-II model (~30 min on Colab GPU) |
+Open `embeddings/Morris_28genes_Enformer.ipynb` in Google Colab — this extracts Enformer trunk embeddings for the 28 target gene TSSs from the human reference genome.
 
 ---
 
