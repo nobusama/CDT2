@@ -1,0 +1,14 @@
+torch>=2.0
+h5py
+numpy
+scipy
+matplotlib
+seaborn
+scikit-learn
+tqdm
+pandas
+huggingface_hub
+
+# Enformer embedding generation (optional)
+enformer-pytorch
+pyfaidx

@@ -60,10 +60,10 @@ CDT2/
 | `CellLevel_Training` | CDT-II model training on Morris STING-seq data |
 | `Prediction_Analysis` | Per-gene prediction performance (r=0.84) |
 | `Attention_Analysis` | GFI1B regulatory network from attention maps |
-| `fig2_ablation_study` | Ablation study (Fig 2) |
-| `fig4a_dna_self_attention` | DNA self-attention analysis (Fig 4A) |
-| `fig5b_go_enrichment` | GO enrichment comparison (Fig 5B) |
-| `fig6_encode_validation` | ENCODE validation (Fig 6) |
+| `fig2_ablation_study` | Ablation study (Fig 2) — reference with executed outputs |
+| `fig4a_dna_self_attention` | DNA self-attention analysis (Fig 4A) — reference with executed outputs |
+| `fig5b_go_enrichment` | GO enrichment comparison (Fig 5B) — reference with executed outputs |
+| `fig6_encode_validation` | ENCODE validation (Fig 6) — reference with executed outputs |
 
 ## Using CDT-II with Your Own Data
 
@@ -162,29 +162,28 @@ Data files are hosted on Hugging Face:
 
 ### Quick Start
 
-The analysis notebooks automatically download data from Hugging Face when running locally:
+The notebooks are designed for **Google Colab** and expect data files on Google Drive at `/content/drive/MyDrive/cdt_data/`. Download files from Hugging Face and upload them to your Google Drive, or use `hf_hub_download`:
 
 ```python
-# Notebooks detect environment and download data automatically
-# On Colab: uses Google Drive
-# Locally: downloads from Hugging Face
-
 from huggingface_hub import hf_hub_download
-model_path = hf_hub_download(
+
+# Download a file from Hugging Face
+path = hf_hub_download(
     repo_id="nobusama17/CDT2-data",
     filename="cdt_morris_celllevel_best.pt",
     repo_type="dataset"
 )
 ```
 
-All files including Enformer embeddings are available on Hugging Face and will be downloaded automatically by the notebooks.
+The figure notebooks (fig2, fig4a, fig5b, fig6) are included with **executed outputs for reference** — they show how the paper figures were generated. To regenerate them, you need intermediate data produced by the Attention Analysis notebook.
 
 ## Requirements
 
 - Python 3.9+
 - PyTorch 2.0+
-- huggingface_hub
-- Google Colab (recommended for training and Enformer embedding generation)
+- Google Colab with GPU (recommended)
+
+All notebooks are designed for Google Colab. The current version (Stage 1.5) uses 2,361 genes (2,360 base + GFI1B) with unified TSS + SNP perturbation data.
 
 ## Future Direction
 
