@@ -102,7 +102,7 @@ for filename in [
 
 Open `training/CDT_Morris_CRISPRi_CellLevel_Training.ipynb` in Google Colab. Full training requires an A100 GPU with 80GB memory and takes approximately 2 days.
 
-You can also run training partially to observe the learning process, then switch to the provided pre-trained weights (`cdt_morris_celllevel_best.pt`) for analysis.
+Training automatically saves checkpoints, so if interrupted, you can resume from the last checkpoint by rerunning the notebook. You can also skip training entirely and use the provided pre-trained weights (`cdt_morris_celllevel_best.pt`) for analysis.
 
 ### 3. Run the analysis notebooks
 
