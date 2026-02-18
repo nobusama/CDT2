@@ -46,6 +46,7 @@ CDT2/
     └── analysis/           # Results analysis
         ├── CDT_Morris_Prediction_Analysis.ipynb
         ├── CDT_Morris_Attention_Analysis.ipynb
+        ├── CDT_Morris_GFI1B_Subnetwork.ipynb
         ├── fig2_ablation_study.ipynb
         ├── fig4a_dna_self_attention.ipynb
         ├── fig5b_go_enrichment.ipynb
@@ -60,6 +61,7 @@ CDT2/
 | `CellLevel_Training` | CDT-II model training on Morris STING-seq data |
 | `Prediction_Analysis` | Per-gene prediction performance (r=0.84) |
 | `Attention_Analysis` | GFI1B regulatory network from attention maps |
+| `GFI1B_Subnetwork` | GFI1B subnetwork visualization (Fig 5A) — reference with executed outputs |
 | `fig2_ablation_study` | Ablation study (Fig 2) — reference with executed outputs |
 | `fig4a_dna_self_attention` | DNA self-attention analysis (Fig 4A) — reference with executed outputs |
 | `fig5b_go_enrichment` | GO enrichment comparison (Fig 5B) — reference with executed outputs |
