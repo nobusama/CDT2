@@ -38,6 +38,8 @@ CDT2/
 ├── docs/                   # Paper manuscript (.tex, .pdf)
 ├── figures/main/           # All figures
 └── notebooks/
+    ├── embeddings/         # Embedding generation
+    │   └── Morris_28genes_Enformer.ipynb
     ├── training/           # Model training
     │   └── CDT_Morris_CRISPRi_CellLevel_Training.ipynb
     └── analysis/           # Results analysis
@@ -53,6 +55,7 @@ CDT2/
 
 | Notebook | Description |
 |----------|-------------|
+| `Morris_28genes_Enformer` | Enformer embedding generation for 28 target gene TSSs |
 | `CellLevel_Training` | CDT-II model training on Morris STING-seq data |
 | `Prediction_Analysis` | Per-gene prediction performance (r=0.84) |
 | `Attention_Analysis` | GFI1B regulatory network from attention maps |
