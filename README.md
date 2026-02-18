@@ -132,14 +132,14 @@ Standard scRNA-seq tools (Scanpy, Seurat) handle steps 1-3. Steps 4-6 are specif
 
 ### Swapping the DNA Foundation Model
 
-CDT-II's DNA embedding module is deliberately modular. While we use Enformer in this work, it can be replaced with newer models such as [AlphaGenome](https://deepmind.google/discover/blog/alphagenome-and-alphavariome/) or [Evo](https://arcinstitute.org/news/evo). The key requirement is that the replacement model outputs per-position embeddings along the genomic axis:
+CDT-II's DNA embedding module is deliberately modular. While we use Enformer in this work, it can be replaced with newer DNA foundation models such as [AlphaGenome](https://deepmind.google/discover/blog/alphagenome-ai-for-better-understanding-the-genome/) or [Evo](https://arcinstitute.org/news/evo). The key requirement is that the replacement model provides per-position embeddings along the genomic axis:
 
 ```
-Enformer:     DNA sequence (196kb) → [896, 3072]  (128bp bins)
-AlphaGenome:  DNA sequence (196kb) → [896, 3072]  (same resolution)
+Current:  Enformer  DNA (196kb) → [896, 3072]  (128bp bins, trunk embeddings)
+Swap to:  Any model DNA (input)  → [n_bins, embed_dim]  (per-position embeddings)
 ```
 
-To swap: modify the Enformer embedding notebook to use your preferred model, keeping the output shape `[n_bins, embedding_dim]`. The rest of the CDT-II pipeline (projection, self-attention, cross-attention) works unchanged — only the `dna_dim` in `CDTCRISPRiConfig` needs to match the new embedding dimension.
+AlphaGenome uses a different architecture (U-Net + Transformer, 1Mb input, multi-resolution output) so its intermediate representations will need to be extracted and reshaped to a compatible format. To adapt a new model: (1) extract per-position embeddings at a suitable resolution, (2) update `dna_dim` and `dna_seq_len` in `CDTCRISPRiConfig`, and (3) update the `SequenceProjector` input dimension. The rest of the pipeline (self-attention, cross-attention, VCE) works unchanged.
 
 ## Data
 
