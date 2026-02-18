@@ -139,7 +139,11 @@ Current:  Enformer  DNA (196kb) → [896, 3072]  (128bp bins, trunk embeddings)
 Swap to:  Any model DNA (input)  → [n_bins, embed_dim]  (per-position embeddings)
 ```
 
-AlphaGenome uses a different architecture (U-Net + Transformer, 1Mb input, multi-resolution output) so its intermediate representations will need to be extracted and reshaped to a compatible format. To adapt a new model: (1) extract per-position embeddings at a suitable resolution, (2) update `dna_dim` and `dna_seq_len` in `CDTCRISPRiConfig`, and (3) update the `SequenceProjector` input dimension. The rest of the pipeline (self-attention, cross-attention, VCE) works unchanged.
+AlphaGenome uses a different architecture (U-Net + Transformer, 1Mb input, multi-resolution output) so its intermediate representations will need to be extracted and reshaped. **For practical use today, we recommend extracting the ±98kb region around the TSS at 128bp resolution to match the current [896, embed_dim] format.** This keeps GPU memory requirements manageable (self-attention scales quadratically with sequence length) and the current 196kb window already achieves strong results (mean r = 0.84).
+
+To adapt a new model: (1) extract per-position embeddings at 128bp resolution for the TSS-centered region, (2) update `dna_dim` and `dna_seq_len` in `CDTCRISPRiConfig`, and (3) update the `SequenceProjector` input dimension. The rest of the pipeline works unchanged.
+
+CDT-II uses Flash Attention (`torch.nn.functional.scaled_dot_product_attention`) throughout, so extending to longer sequences in the future — as GPU memory grows — is straightforward.
 
 ## Data
 
