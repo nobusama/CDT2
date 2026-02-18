@@ -35,6 +35,7 @@ CDT-II is an "AI microscope" whose attention maps are directly interpretable as 
 
 ```
 CDT2/
+├── data/                   # TSS coordinates and metadata
 ├── docs/                   # Paper manuscript (.tex, .pdf)
 ├── figures/main/           # All figures
 └── notebooks/
