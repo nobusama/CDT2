@@ -231,10 +231,11 @@ All notebooks are designed for Google Colab. The current version (Stage 1.5) use
 
 ## Future Direction
 
-CDT-III is in early planning. Two key directions are being explored:
+CDT-II currently integrates DNA and RNA modalities. The next generation aims to complete the Central Dogma by adding the protein layer:
 
-- **Epigenomic integration** — Incorporating chromatin accessibility, histone modifications, and DNA methylation into the Central Dogma framework, enabling the model to capture the regulatory layers between genome and transcriptome.
-- **Drug discovery applications** — Extending CDT's interpretable multi-modal architecture toward predicting and understanding drug responses at the cellular level.
+- **Full Central Dogma integration (DNA → RNA → Protein)** — Incorporating proteomic data (e.g., from DOGMA-seq or CITE-seq) to capture the complete flow of biological information. DNA-to-RNA cross-attention reveals transcriptional control; RNA-to-Protein cross-attention will reveal translational and post-transcriptional regulation. This enables observation of the entire regulatory cascade within a single framework.
+- **Drug discovery and diagnostics** — With all three modalities integrated, CDT can identify drug targets by observing how perturbations propagate from DNA through RNA to protein, and reveal diagnostic biomarkers by detecting regulatory disruptions across the Central Dogma.
+- **Epigenomic integration** — Incorporating chromatin accessibility, histone modifications, and DNA methylation to capture the regulatory layers between genome and transcriptome.
 
 ## Citation
 
