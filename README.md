@@ -231,7 +231,7 @@ All notebooks are designed for Google Colab. The current version (Stage 1.5) use
 
 ## Future Direction
 
-CDT v1 ([arXiv:2601.01089](https://arxiv.org/abs/2601.01089)) established the three-modality framework integrating DNA, RNA, and protein embeddings. CDT-II refined the architecture for cell-level interpretability with DNA and RNA. The next generation aims to reunify all three modalities within CDT-II's improved architecture:
+CDT v1 ([arXiv:2601.01089](https://arxiv.org/abs/2601.01089)) established the foundational framework for integrating all three Central Dogma modalities: DNA, RNA, and protein. CDT-II focused on DNA and RNA to develop cell-level interpretable architecture. The next generation aims to extend CDT-II's architecture back to all three modalities, building on CDT v1's foundational framework:
 
 - **Full Central Dogma integration (DNA → RNA → Protein)** — Incorporating proteomic data (e.g., from DOGMA-seq or CITE-seq) to capture the complete flow of biological information. DNA-to-RNA cross-attention reveals transcriptional control; RNA-to-Protein cross-attention will reveal translational and post-transcriptional regulation. This enables observation of the entire regulatory cascade within a single framework.
 - **Drug discovery and diagnostics** — With all three modalities integrated, CDT can identify drug targets by observing how perturbations propagate from DNA through RNA to protein, and reveal diagnostic biomarkers by detecting regulatory disruptions across the Central Dogma.
