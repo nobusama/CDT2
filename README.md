@@ -23,8 +23,10 @@ CDT-II is an "AI microscope" whose attention maps are directly interpretable as 
 | Overall validation r | 0.64 |
 | Per-gene mean r | 0.84 |
 | GFI1B network enrichment | 6.6× (P=3.5×10⁻¹⁷) |
-| RNA processing module | P=1×10⁻¹⁶ |
-| Gradient-based attribution | r=0.83 |
+| RNA processing module overlap | 80% (P=9.3×10⁻⁴⁶) |
+| CTCF enrichment (28 genes) | 7.67× (P<0.001) |
+| Gradient-based attribution | mean r=0.82 |
+| TFRC clinical correspondence | 5/10 functional categories |
 
 ## Paper
 
@@ -50,7 +52,9 @@ CDT2/
         ├── fig2_ablation_study.ipynb
         ├── fig4a_dna_self_attention.ipynb
         ├── fig5b_go_enrichment.ipynb
-        └── fig6_encode_validation.ipynb
+        ├── fig6_encode_validation.ipynb
+        ├── fig_gradient_vs_experimental.ipynb
+        └── fig_jacobian_heatmap.ipynb
 ```
 
 ## Notebooks
@@ -68,6 +72,8 @@ All notebooks are intentionally written as self-contained, top-to-bottom readabl
 | `fig4a_dna_self_attention` | DNA self-attention analysis (Fig 4A) — reference with executed outputs |
 | `fig5b_go_enrichment` | GO enrichment comparison (Fig 5B) — reference with executed outputs |
 | `fig6_encode_validation` | ENCODE validation (Fig 6) — reference with executed outputs |
+| `fig_gradient_vs_experimental` | Gradient attribution scatter plot and per-gene correlation (Fig 8) |
+| `fig_jacobian_heatmap` | Jacobian heatmap and TFRC pathway analysis (Fig 9, Table 1) |
 
 ## Quick Start: Reproduce Our Results
 
@@ -113,6 +119,8 @@ Training automatically saves checkpoints, so if interrupted, you can resume from
 | 1 | `analysis/CDT_Morris_Prediction_Analysis.ipynb` | Per-gene prediction accuracy (r=0.84) |
 | 2 | `analysis/CDT_Morris_Attention_Analysis.ipynb` | GFI1B regulatory network, attention maps |
 | 3 | `analysis/CDT_Morris_GFI1B_Subnetwork.ipynb` | Network visualization (Fig 5A) |
+| 4 | `analysis/fig_gradient_vs_experimental.ipynb` | Gradient attribution analysis (Fig 8) |
+| 5 | `analysis/fig_jacobian_heatmap.ipynb` | TFRC Jacobian regulatory map (Fig 9, Table 1) |
 
 ### 4. (Optional) Regenerate Enformer embeddings
 

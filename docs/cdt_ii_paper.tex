@@ -1,13 +1,12 @@
-\documentclass[11pt,a4paper]{article}
+\documentclass[12pt,a4paper]{article}
 
-% Packages
+% OUP Bioinformatics style
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
 \usepackage[margin=2.5cm]{geometry}
 \usepackage{graphicx}
 \usepackage{amsmath,amssymb}
-\usepackage{natbib}
 \usepackage{hyperref}
 \usepackage{xcolor}
 \usepackage{booktabs}
@@ -17,6 +16,7 @@
 \captionsetup{font=footnotesize}
 \usepackage{setspace}
 \usepackage{titlesec}
+\usepackage{lineno}
 
 % Hyperref settings
 \hypersetup{
@@ -30,401 +30,478 @@
 \titleformat{\section}{\large\bfseries}{\thesection}{1em}{}
 \titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{1em}{}
 
-% Line spacing
-\onehalfspacing
+% Double spacing (Bioinformatics requires double spacing for submission)
+\doublespacing
 
-% Remove page numbers
-\pagestyle{empty}
+% Page numbers
+\pagestyle{plain}
 
 % Title
 \title{\textbf{Central Dogma Transformer II}\\[0.3cm]
 \large An AI Microscope for Understanding Cellular Regulatory Mechanisms}
 
-\author{Nobuyuki Ota\\[0.2cm]
-\small Independent Researcher, Burlingame, CA, USA\\
-\small \texttt{nobuyuki.ohta@gmail.com}}
+\author{Nobuyuki Ota\footnote{Correspondence: \texttt{nobuyuki.ohta@gmail.com}}\\[0.2cm]
+\small Independent Researcher, Burlingame, CA, USA}
 
 \date{}
 
 \begin{document}
 
+\linenumbers
 \maketitle
-
-\vspace{0.5cm}
 
 \begin{abstract}
 \noindent
-Current biological AI models lack interpretability---their internal representations do not correspond to biological relationships that researchers can examine. Here we present CDT-II, an ``AI microscope'' whose attention maps are directly interpretable as regulatory structure. By mirroring the central dogma in its architecture, CDT-II ensures that each attention mechanism corresponds to a specific biological relationship: DNA self-attention for genomic relationships, RNA self-attention for gene co-regulation, and DNA-to-RNA cross-attention for transcriptional control. Using only genomic embeddings and raw per-cell expression, CDT-II enables experimental biologists to observe regulatory networks in their own data. Applied to K562 CRISPRi data, CDT-II predicts perturbation effects (per-gene mean $r = 0.84$) and recovers the \textit{GFI}1\textit{B} regulatory network without supervision (6.6-fold enrichment, $P = 3.5 \times 10^{-17}$). Systematic comparison against ENCODE K562 regulatory annotations reveals that cross-attention autonomously focuses on known regulatory elements---DNase hypersensitive sites (201$\times$ enrichment), CTCF binding sites (28$\times$), and histone marks---across all five held-out genes. Two distinct attention mechanisms independently identify an overlapping RNA processing module (80\% gene overlap; RNA binding enrichment $P = 1 \times 10^{-16}$). CDT-II establishes mechanism-oriented AI as an alternative to task-oriented approaches, revealing regulatory structure rather than merely optimizing predictions.
+\textbf{Motivation:} Current biological AI models lack interpretability---their internal representations do not correspond to biological relationships that researchers can examine. Understanding gene regulation requires models whose learned structure can be directly interrogated to generate experimentally testable hypotheses.
+
+\textbf{Results:} CDT-II mirrors the central dogma in its architecture---DNA self-attention, RNA self-attention, and cross-attention for transcriptional control---requiring only genomic embeddings and raw per-cell expression. Applied to K562 CRISPRi data with five genes held out entirely, CDT-II predicts perturbation effects (per-gene mean $r = 0.84$), recovers the \textit{GFI1B} regulatory network (6.6-fold enrichment, $P = 3.5 \times 10^{-17}$), and shows that cross-attention focuses on ENCODE regulatory elements including CTCF sites (mean 7.67$\times$ across 28 targets, $P < 0.001$). Gradient-based attribution accurately predicts downstream consequences of perturbing therapeutic targets (mean $r = 0.82$). Applied to \textit{TFRC}, the target of the anti-TfR1 antibody PPMX-T003, gradient analysis identifies genes involved in erythrocyte structure, iron-dependent DNA synthesis, and oxidative stress---pathways that align with anemia and reticulocyte decrease reported in Phase~1 trials and ferroptosis demonstrated in preclinical studies, without any clinical data as input, establishing CDT-II as an AI microscope that reveals clinically relevant regulatory structure from perturbation experiments alone.
+
+\textbf{Availability:} Source code is available at \url{https://github.com/nobusama/CDT2}. Pre-computed embeddings, training data, and model weights are available at \url{https://huggingface.co/datasets/nobusama17/CDT2-data}.
+
+\textbf{Contact:} nobuyuki.ohta@gmail.com
 \end{abstract}
 
-\vspace{0.5cm}
+\section{Introduction}
 
-\section*{Introduction}
+The central dogma [1] describes cellular information flow across three molecular layers: DNA encodes genetic instructions, RNA transmits and regulates this information, and proteins execute cellular functions. Artificial intelligence has transformed our ability to model each layer individually [2--5], yet a fundamental limitation remains: current models lack interpretability [6,7]. Their internal representations do not correspond to biological entities or relationships that researchers can examine and validate. The goal of biological research, however, is not merely to predict cellular responses but to understand the mechanisms that produce them---and such understanding has direct clinical implications, from anticipating drug side effects to identifying new therapeutic targets.
 
-The central dogma\textsuperscript{1} describes cellular information flow across three molecular layers: DNA encodes genetic instructions, RNA transmits and regulates this information, and proteins execute cellular functions. Artificial intelligence has transformed our ability to model each layer individually\textsuperscript{2--7}, yet a fundamental limitation remains: current models lack interpretability\textsuperscript{8,9}. Their internal representations do not correspond to biological entities or relationships that researchers can examine and validate. The goal of biological research, however, is not merely to predict cellular responses but to understand the mechanisms that produce them. What biology needs is not task-oriented AI optimizing predictions, but mechanism-oriented AI revealing regulatory structure.
+To address this limitation, we reframe biological AI as an ``AI microscope'' whose attention maps are directly interpretable as regulatory structure. The Central Dogma Transformer [8] implements this principle by mirroring the central dogma in its architecture: DNA self-attention captures genomic relationships, RNA self-attention reflects gene co-regulation, and DNA-to-RNA cross-attention models transcriptional control. Because each attention mechanism corresponds to a specific biological relationship, the resulting maps provide direct readouts of regulatory organization. This architectural inductive bias fundamentally changes the meaning of prediction accuracy: unlike models optimizing prediction as an end goal, CDT-II uses prediction accuracy as evidence that the model has learned correct regulatory structure.
 
-To address this limitation, we reframe biological AI as an ``AI microscope'' whose attention maps are directly interpretable as regulatory structure. The Central Dogma Transformer\textsuperscript{10} implements this principle by mirroring the central dogma in its architecture: DNA self-attention captures genomic relationships, RNA self-attention reflects gene co-regulation, and DNA-to-RNA cross-attention models transcriptional control. Because each attention mechanism corresponds to a specific biological relationship, the resulting maps provide direct readouts of regulatory organization. This architectural inductive bias fundamentally changes the meaning of prediction accuracy: unlike models optimizing prediction as an end goal, CDT-II uses prediction accuracy as evidence that the model has learned correct regulatory structure. As training progresses, improving predictions and discovering biology become the same objective.
+Critically, CDT-II's success stems not only from model architecture but also from task formulation. The model receives raw per-cell expression values as input and predicts expression \textit{changes} (log2 fold changes) as output---without being provided the difference or any reference to the unperturbed state. This forces the model to learn what constitutes ``change'' and which genes influence which: to predict how gene B changes when locus A is perturbed, the model must internalize the regulatory relationship between A and B.
 
-Critically, CDT-II's success stems not only from model architecture but also from task formulation. The model receives raw per-cell expression values as input and predicts expression \textit{changes} (log2 fold changes) as output---without being provided the difference or any reference to the unperturbed state. This design forces the model to learn what constitutes ``change'' and which genes influence which: to predict how gene B changes when locus A is perturbed, the model must internalize the regulatory relationship between A and B. By not explicitly computing differences in the input, we ensure that attention maps reflect genuinely learned regulatory structure rather than artifacts of input preprocessing.
+While CDT v1 required three pre-trained language models, CDT-II reduces the input requirements to genomic sequence embeddings and raw per-cell expression. CDT-II is designed as an integration platform: pre-trained language models provide representations of each molecular layer, while task-driven training on experimental data organizes this knowledge into interpretable regulatory maps. The DNA embedding component is deliberately modular, allowing it to be upgraded as genomic foundation models improve.
 
-While CDT v1 required three pre-trained language models, CDT-II reduces the input requirements to genomic sequence embeddings and raw per-cell expression, enabling experimental biologists to observe regulatory networks in their own data. CDT-II is designed as an integration platform rather than a standalone model: pre-trained language models provide the best available representations of each molecular layer, while task-driven training on experimental data organizes this knowledge into interpretable regulatory maps. The DNA embedding component is deliberately modular, allowing it to be upgraded as genomic foundation models improve. Because each attention mechanism corresponds to a specific biological relationship, CDT-II's outputs generate experimentally testable hypotheses---creating a feedback cycle in which experimental validation improves the model, and the improved model generates sharper hypotheses for the next round of experiments.
+We validated CDT-II on a large-scale K562 CRISPRi screen [9--11], holding out five perturbation targets entirely---including \textit{GFI1B}, a master transcriptional regulator, and \textit{TFRC} (CD71), the target of the anti-TfR1 antibody PPMX-T003 currently in clinical trials [36].
 
-We validated CDT-II on a large-scale K562 CRISPRi screen\textsuperscript{11,12}, holding out five perturbation targets entirely---including \textit{GFI}1\textit{B}, a master transcriptional regulator with hundreds of experimentally characterized trans-regulatory targets\textsuperscript{12}---to test whether regulatory networks could be recovered from unsupervised attention patterns. Here we report five principal findings. First, CDT-II achieves a validation Pearson correlation of 0.64 (per-gene mean $r = 0.84$) without requiring RNA or protein language models. Second, attention analysis recovers \textit{GFI}1\textit{B}'s trans-regulatory network with 6.6-fold enrichment over random expectation ($P = 3.5 \times 10^{-17}$), demonstrating unsupervised discovery of a known regulatory program. Third, two distinct attention mechanisms---RNA self-attention and DNA-to-RNA cross-attention---independently identify an overlapping RNA processing module (80\% gene overlap) with highly significant functional enrichment (RNA binding, $P = 1 \times 10^{-16}$), revealing hierarchical regulation across central dogma layers. Fourth, an ablation study establishes that gene set quality, determined by cross-dataset reproducibility, governs model resolution. Fifth, systematic comparison against ENCODE K562 regulatory annotations reveals that cross-attention autonomously focuses on known regulatory elements, including DNase hypersensitive sites and CTCF binding sites, across all five held-out genes. Together, these results demonstrate that CDT-II's attention maps provide biologically meaningful observations of regulatory networks.
+Our results establish three principal claims. First, CDT-II's attention maps recover known regulatory structure without supervision: the \textit{GFI1B} trans-regulatory network (6.6-fold enrichment, $P = 3.5 \times 10^{-17}$), ENCODE regulatory elements including CTCF binding sites (mean $7.67\times$ across 28 genes, $P < 0.001$), and convergent identification of an RNA processing module by two independent attention mechanisms (80\% gene overlap, $P = 9.3 \times 10^{-46}$). Second, gradient-based attribution---which captures the integrated sensitivity across all model layers---accurately predicts the transcriptional consequences of perturbing therapeutic targets (mean $r = 0.82$ across five held-out genes). Third, applied to \textit{TFRC}, gradient analysis generates a genome-wide regulatory map of TfR1 inhibition that aligns with PPMX-T003 clinical and preclinical findings across five of ten functional categories, while the remaining categories---including an ER stress signature not yet reported clinically---demonstrate CDT-II's capacity to generate predictions beyond current experimental knowledge.
 
-\section*{Results}
+\section{Methods}
 
-\subsection*{CDT-II architecture and the AI microscope framework}
+\subsection{Data sources and preprocessing}
 
-CDT-II implements a two-modality architecture that follows the directional logic of the central dogma (\textbf{Fig.~1}). Genomic DNA embeddings, generated by Enformer\textsuperscript{3} from sequences centered on perturbation sites, are represented as a $896 \times 3{,}072$ matrix (896 genomic bins spanning approximately 115 kilobases at 128-base-pair resolution, each with a 3,072-dimensional embedding). Per-cell RNA expression values for 2,361 genes are encoded by a RawExpressionEncoder that combines learned gene identity embeddings with projected expression values, producing gene-level representations of dimension 512.
+\textbf{Primary CRISPRi dataset.} We used the STING-seq v2 dataset [11] (GEO accession GSE171452), which profiled 60,505 K562 cells using single-cell RNA sequencing combined with CRISPR interference [9,12]. Perturbations targeted 447 genomic loci: 27 transcription start sites (TSS) and 420 single-nucleotide polymorphism (SNP) loci. Cells were retained only if exactly one target gene had UMI $\geq 50$ with no competing signal, yielding 10,328 assignable cells (8,250 TSS-perturbed and 2,078 non-targeting controls used as unperturbed baseline). An additional 7,407 SNP-perturbed cells (420 loci) were used with guide assignments from the original publication [11], for a total of 15,657 perturbed cells (8,250 TSS + 7,407 SNP; 13,620 training, 2,037 validation).
 
-Each modality first passes through self-attention layers\textsuperscript{13} that capture internal structure: two layers for DNA (learning relationships between genomic positions) and one layer for RNA (learning co-regulatory relationships between genes). A cross-attention layer then models transcriptional regulation, with RNA representations serving as queries and DNA representations as keys and values---enabling the model to learn which genomic regions are relevant for each gene's regulation. All attention operations use 8 heads and preserve the original dimensionality, ensuring that attention maps remain directly interpretable as gene-by-gene or gene-by-position matrices.
+\textbf{Gene set curation.} The 2,361-gene set was derived by intersecting genes detected as expressed in both an independent K562 CRISPRi screen [13] and the primary STING-seq dataset [11], plus \textit{GFI1B} as a critical test case for unsupervised network recovery.
 
-After cross-attention, a Virtual Cell Embedding (VCE)\textsuperscript{10} module integrates DNA and RNA representations into a unified 512-dimensional cell-state vector. This integration uses learned attention pooling, which weights each modality's elements based on their relevance. A two-layer task head then projects this VCE to predict log2 fold changes for all 2,361 genes simultaneously. The complete model contains approximately 21 million parameters (see Online Methods for training details).
+\textbf{DNA embeddings.} Pre-computed Enformer [3] embeddings of shape [896, 3,072] were generated for each perturbation locus, spanning approximately 115 kilobases at 128-base-pair resolution.
 
-The dataset comprised 15,657 K562 cells from the CRISPRi screen\textsuperscript{12}: 8,250 cells from TSS perturbations (27 genes) and 7,407 cells from SNP perturbations (420 loci). Of these, 13,620 cells were used for training and 2,037 cells were reserved for validation. Training included 6,213 TSS cells (22 genes) and all 7,407 SNP cells. Validation comprised five genes held out entirely at the gene level: \textit{GFI}1\textit{B}, \textit{CD}52, \textit{TFRC}, \textit{CD}44, and \textit{TNFSF}9. This gene-level holdout ensures that validation performance reflects generalization to entirely unseen perturbation targets---a stringent test of the model's ability to learn transferable regulatory patterns rather than memorize gene-specific effects.
+\subsection{Model architecture}
 
-The AI microscope framework assigns distinct roles to each component: prediction accuracy is the focus adjustment, the gene set is the objective lens, and attention maps are the image. This framing structures the subsequent analyses: we first validate the lens quality through ablation (Fig.~2), confirm proper focus through prediction performance (Fig.~3), and then examine what the microscope reveals (Fig.~4--6).
+CDT-II follows the design principles established in CDT v1 [8] (Fig.~1). The RawExpressionEncoder combines learned gene identity embeddings with projected log1p(CPM) expression values to produce gene-level representations. Enformer DNA embeddings are projected from 3,072 to 512 dimensions. All attention operations use scaled dot-product attention [14] with 8 heads, embedding dimension $d = 512$, FFN hidden dimension $4d = 2{,}048$, GELU activation, and dropout $p = 0.3$. DNA representations pass through 2 self-attention layers; RNA representations pass through 1 self-attention layer followed by 1 cross-attention layer (RNA queries, DNA keys/values). The Virtual Cell Embedder [8] uses 4-head attention pooling to compress each modality, which are concatenated and fused. A two-layer task head predicts log2 fold changes for all 2,361 genes. Total parameters: $\sim$21 million.
 
-% Figure 1
-\begin{figure}[H]
+\subsection{Training procedure}
+
+Training used mean squared error loss with AdamW [15] optimizer (learning rate $1 \times 10^{-4}$, weight decay $1 \times 10^{-5}$) and ReduceLROnPlateau scheduling (factor 0.5, patience 10 epochs). Gradient norms were clipped to 1.0. Batch size was 64. Training was performed on a single NVIDIA A100 GPU (40 GB) and completed in approximately 2 days. Inference takes approximately 0.5 seconds per cell. Five genes were held out entirely at the gene level: \textit{GFI1B}, \textit{CD52}, \textit{TFRC}, \textit{CD44}, and \textit{TNFSF9}.
+
+\subsection{Attention map extraction and analysis}
+
+Attention weights were extracted from each mechanism during inference: the RNA self-attention matrix [$2{,}361 \times 2{,}361$] captures gene co-regulation; the DNA-to-RNA cross-attention matrix [$2{,}361 \times 896$] captures gene-by-position regulatory relationships. Louvain community detection [16] (resolution 1.0) was applied to identify modules. Gene Ontology [17] and pathway enrichment was performed using Enrichr [18] against GO Molecular Function, KEGG [19], and Reactome [20] databases.
+
+\subsection{Gradient analysis}
+
+CDT-II receives two inputs: DNA embeddings (Enformer, fixed per target gene) and RNA expression values (2,361 genes per cell). Gradient analysis queries the model's learned regulatory structure by computing the Jacobian matrix $J_{ji} = \partial(\text{predicted output}_j)/\partial(\text{RNA input}_i)$ via backpropagation through the full model---including RNA self-attention, DNA-to-RNA cross-attention, the Virtual Cell Embedder, and output layers. Unlike attention maps, which reflect a single layer, the Jacobian captures the integrated sensitivity across all model components.
+
+For each held-out perturbation target, the DNA embedding was fixed to the target gene's Enformer representation, and RNA input was set to the non-targeting control (NTC) mean expression across 2,361 genes. The Jacobian was computed for the top 100 output genes ranked by experimental effect size (mean $|\log_2\text{FC}|$ across perturbed cells). For each input gene $i$, a gradient importance score was defined as the mean absolute Jacobian across all 100 output genes: $\text{GI}(i) = \frac{1}{100}\sum_{j=1}^{100}|J_{ji}|$. Genes were ranked by this score to identify the input genes whose expression most strongly influences the model's predictions under a given perturbation. Gradient-derived rankings were compared with experimental effect sizes for each of the five held-out genes, yielding mean Pearson $r = 0.82$ (range 0.76--0.86). Importantly, gradient importance and experimental effect size operate on orthogonal dimensions: GI scores rank \textit{input} genes by their influence on model predictions, whereas experimental effect sizes measure \textit{output} gene changes; their correlation therefore reflects a genuine biological signal rather than a tautological relationship.
+
+For the Jacobian heatmap visualization (Fig.~9), the absolute Jacobian values for the top 100 output genes $\times$ top 50 input genes (by gradient importance) were log$_{10}$-transformed and hierarchically clustered using Ward's method with correlation distance.
+
+\subsection{ENCODE enrichment analysis}
+
+\begin{sloppypar}
+Cross-attention profiles were compared against ENCODE K562 regulatory
+annotations [21]: CTCF ChIP-seq (ENCFF769AUF), H3K27ac ChIP-seq
+(ENCFF864OSZ), H3K4me1 ChIP-seq (ENCFF135ZLM), H3K4me3 ChIP-seq
+(ENCFF313FYW), and DNase-seq (ENCFF422QRZ).
+For each gene, the top 10\% of attention bins (89 of 896) were tested
+for overlap with regulatory peaks using Fisher's exact test with Haldane
+correction (adding 0.5 to each cell of the $2 \times 2$ table).
+All significant $P$ values were below the Bonferroni-corrected threshold
+($0.05/25 = 0.002$). Circular permutation tests ($n = 1{,}000$)
+controlled for spatial autocorrelation.
+\end{sloppypar}
+
+\subsection{Cross-attention CTCF enrichment across 28 genes}
+
+To test generalizability beyond the five held-out genes, cross-attention was extracted for all 28 CRISPRi target genes using the Morris STING-seq v2 dataset [11]. To confirm robustness to the choice of CTCF peak calls, we used an independent ENCODE K562 CTCF ChIP-seq dataset (ENCFF796WRU) rather than the dataset used in the 5-gene analysis (ENCFF769AUF). For each gene, the fraction of CTCF sites in the top 10\% attention bins was compared to the expected 10\% baseline. Significance was assessed by permutation test ($n = 1{,}000$): for each permutation, random sets of 89 bins (top 10\% of 896) were selected, and the enrichment was recalculated.
+
+\section{Results}
+
+\subsection{CDT-II architecture and the AI microscope framework}
+
+CDT-II implements a two-modality architecture that follows the directional logic of the central dogma (Fig.~1). Genomic DNA embeddings, generated by Enformer [3] from sequences centered on perturbation sites, are represented as a $896 \times 3{,}072$ matrix. Per-cell RNA expression values for 2,361 genes are encoded by a RawExpressionEncoder that combines learned gene identity embeddings with projected expression values, producing gene-level representations of dimension 512.
+
+Each modality first passes through self-attention layers that capture internal structure: two layers for DNA and one layer for RNA. A cross-attention layer then models transcriptional regulation, with RNA representations serving as queries and DNA representations as keys and values. All attention operations use 8 heads and preserve the original dimensionality, ensuring that attention maps remain directly interpretable as gene-by-gene or gene-by-position matrices.
+
+We validated CDT-II on a large-scale K562 CRISPRi screen [11] comprising 15,657 cells (13,620 training; 2,037 validation). Five perturbation targets were held out entirely at the gene level: \textit{GFI1B}, \textit{CD52}, \textit{TFRC}, \textit{CD44}, and \textit{TNFSF9}.
+
+\begin{../figures/main/figure}[H]
 \centering
 \includegraphics[width=\textwidth]{../figures/main/fig1_CDTv2_architecture.png}
-\caption{\textbf{CDT-II architecture and interpretable attention maps.} Unlike conventional deep learning models whose internal representations are opaque, CDT-II produces attention maps that directly correspond to biological relationships. CDT-II processes two input modalities following the central dogma. \textbf{Left branch}: Genomic DNA sequences centered on perturbation loci ($\pm$57 kb) are encoded by Enformer, projected to a common dimension, and processed by two DNA self-attention layers that capture genomic relationships between positions. \textbf{Right branch}: Per-cell RNA expression values from scRNA-seq data are encoded by the RawExpressionEncoder, projected, and processed by one RNA self-attention layer that captures gene co-regulatory relationships. \textbf{Center}: A DNA-to-RNA cross-attention layer models transcriptional control, with RNA representations as queries and DNA representations as keys and values. The Virtual Cell Embedder integrates both modalities through attention pooling into a unified cell-state vector, which the Task Head projects to predict perturbation effects for all 2,361 genes. \textbf{Right panels}: Each attention mechanism produces an interpretable map---DNA self-attention reveals genomic relationships (blue), RNA self-attention reveals gene co-regulation networks (orange), and cross-attention reveals transcriptional control patterns (purple). These maps constitute the primary output of the ``AI microscope,'' enabling direct observation of regulatory structure.}
-\label{fig:architecture}
-\end{figure}
+\caption{\textbf{CDT-II architecture.} The model mirrors the central dogma: DNA self-attention captures genomic relationships within a $\pm$57 kb window, RNA self-attention captures gene co-regulation, and cross-attention models transcriptional control. A Virtual Cell Embedder integrates both modalities to predict perturbation effects.}
+\label{../figures/main/fig:architecture}
+\end{../figures/main/figure}
 
-\subsection*{Gene set quality determines microscope resolution}
+\subsection{Gene set quality determines model resolution}
 
-To justify the choice of 2,361 genes---and to establish a general principle for applying CDT-II to new datasets---we conducted an ablation study across gene set configurations (\textbf{Fig.~2}).
+Our initial attempt used 9,335 genes with a single-dataset expression threshold ($\sim$54 million parameters), plateauing at $r = 0.37$ with attention collapse. Despite having 2.6$\times$ more parameters, this larger model underperformed, indicating that model capacity is not the bottleneck---data quality is. We hypothesized that genes lacking reproducibility across independent experiments introduced noise. Applying a cross-dataset filter---retaining 2,361 genes detected in two independent K562 CRISPRi screens [11,13]---the smaller model ($\sim$21 million parameters) improved steadily to $r = 0.64$ with training $r = 0.65$, indicating minimal overfitting (Fig.~2).
 
-Our initial attempt used 9,335 genes detected in at least 10\% of cells in the CRISPRi dataset\textsuperscript{12}, applying only a single-dataset expression threshold. This configuration ($\sim$54 million parameters) plateaued at a validation Pearson $r$ of 0.37, and attention maps exhibited collapse---a diffuse, uninformative pattern indicating that the model could not resolve regulatory structure from the noisy gene set.
-
-Based on this result, we hypothesized that genes lacking reproducibility across independent experiments introduced noise that degraded model performance. We therefore applied a cross-dataset filter, retaining only the 2,360 genes detected as expressed in two independent K562 CRISPRi screens\textsuperscript{12,14}, and added \textit{GFI}1\textit{B} as a critical test case (2,361 total, $\sim$21 million parameters). The effect was immediate: with reduced noise, the learning curve improved steadily throughout training, reaching $r = 0.64$ with training $r = 0.65$---indicating minimal overfitting.
-
-The contrast is stark: nearly quadrupling the gene count degraded performance by 42\%, while filtering to cross-dataset reproducible genes yielded a 73\% improvement. Notably, the larger model ($\sim$54 million parameters) underperformed the smaller one ($\sim$21 million parameters), the opposite of what would be expected if model capacity were the limiting factor. This establishes a counterintuitive but practically important principle: gene set quality, not quantity, determines the resolution of the AI microscope. Cross-dataset reproducibility filtering removes genes whose perturbation responses are dominated by technical or biological noise, enabling the model to learn sharper regulatory relationships.
-
-% Figure 2
-\begin{figure}[H]
+\begin{../figures/main/figure}[H]
 \centering
 \includegraphics[width=0.9\textwidth]{../figures/main/fig2_ablation_study.png}
-\caption{\textbf{Gene set quality determines microscope resolution.} Learning curves comparing two gene set curation strategies demonstrate that quality, not quantity, determines model performance. \textbf{(A)} Validation Pearson $r$ over training epochs. The Curated gene set (2,361 genes selected via cross-dataset reproducibility; black) achieves validation $r = 0.64$, while the Full gene set (9,335 genes from a single dataset; red) shows initial improvement but eventual attention collapse, reaching only validation $r = 0.37$ before early stopping---despite containing nearly 4$\times$ more genes. \textbf{(B)} Train versus validation curves for both configurations. The Curated set maintains parallel train/val curves throughout training (training $r = 0.65$, validation $r = 0.64$), indicating proper generalization without overfitting. These results establish that curated, reproducible gene sets function like high-quality optical elements in a microscope: precision matters more than aperture size.}
-\label{fig:ablation}
-\end{figure}
+\caption{\textbf{Gene set quality determines model resolution.} \textbf{(A)} Learning curve comparison: 9,335 genes (left) plateau at $r = 0.37$; 2,361 cross-dataset validated genes (right) reach $r = 0.64$. \textbf{(B)} Attention maps show collapse with noisy gene sets versus structured patterns with filtered genes.}
+\label{../figures/main/fig:learning}
+\end{../figures/main/figure}
 
-\subsection*{CDT-II predicts cell-level perturbation effects}
+\subsection{CDT-II predicts cell-level perturbation effects}
 
-Having established the gene set, we evaluated CDT-II's predictive performance (\textbf{Fig.~3}).
+CDT-II achieved an overall validation Pearson $r$ of 0.64 ($R^2 = 0.41$),
+predicting cell-level log2 fold changes across all five held-out genes simultaneously.
+To evaluate per-gene performance, we computed pseudo-bulk correlations on mean
+trans-effect profiles: \textit{GFI1B} ($r = 0.88$), \textit{TNFSF9} ($r = 0.86$),
+\textit{TFRC} ($r = 0.85$), \textit{CD44} ($r = 0.85$), and \textit{CD52}
+($r = 0.75$), yielding a mean of $r = 0.84$ (Fig.~3).
+Morris et al.\ found that only 56\% of \textit{GFI1B} trans-targets replicated
+in the independent Gasperini dataset [11,13], and direct comparison of pseudo-bulk
+effect sizes between studies yields $r \approx 0.79$.
+CDT-II's mean pseudo-bulk correlation ($r = 0.84$) approaches this empirical
+reproducibility limit, indicating that the model captures the majority of
+reproducible biological signal. The lower cell-level correlation ($r = 0.64$)
+reflects stochastic variation inherent to single-cell measurements.
 
-CDT-II achieved an overall validation Pearson $r$ of 0.64 ($R^2 = 0.41$) and Spearman $\rho$ of 0.46, predicting cell-level log2 fold changes across all five held-out genes simultaneously.
-
-To evaluate how well CDT-II captures the trans-regulatory ``fingerprint'' of each perturbation, we averaged predictions and observations across cells for each held-out gene and computed Pearson $r$ on these mean trans-effect profiles: \textit{GFI}1\textit{B} ($r = 0.88$), \textit{TNFSF}9 ($r = 0.86$), \textit{TFRC} ($r = 0.85$), \textit{CD}44 ($r = 0.85$), and \textit{CD}52 ($r = 0.75$), yielding a mean $r$ of 0.84. This high pseudo-bulk correlation demonstrates that CDT-II faithfully captures the transcriptome-wide pattern of perturbation effects---the regulatory ``fingerprint'' that distinguishes one perturbation from another.
-
-To contextualize these correlations, we examined the empirical reproducibility of CRISPRi perturbation effects across independent studies. Morris et al. found that only 56\% of \textit{GFI}1\textit{B} trans-targets identified in their STING-seq screen replicated in the independent Gasperini dataset\textsuperscript{12,14}, and direct comparison of pseudo-bulk effect sizes between the two K562 CRISPRi studies yields $r \approx 0.79$. CDT-II's pseudo-bulk correlation (mean $r = 0.84$) surpasses this empirical ceiling, indicating that the model captures essentially all reproducible biological signal. The lower cell-level correlation ($r = 0.64$) reflects stochastic variation inherent to single-cell measurements---noise that is averaged out at the pseudo-bulk level but represents a fundamental limit of single-cell prediction.
-
-Trans-target prediction provided a stringent test of CDT-II's ability to capture regulatory wiring. Among the top 50 predicted trans-targets, 26 overlapped with the top 50 experimentally determined \textit{GFI}1\textit{B} targets (52\%, approximately 25-fold enrichment over the 2.1\% expected by chance), and \textit{CD}52 showed comparable overlap (25 of 50, 50\%). Notable \textit{GFI}1\textit{B} trans-targets among these include \textit{G}0\textit{S}2, \textit{TXNIP}, and \textit{JUN}---genes involved in cell cycle arrest, oxidative stress response, and transcriptional regulation, respectively, consistent with \textit{GFI}1\textit{B}'s known functions in hematopoietic differentiation.
-
-% Figure 3
-\begin{figure}[H]
-% Panel A
-\raggedright\noindent\textbf{A}\par\vspace{4pt}
+\begin{../figures/main/figure}[H]
 \centering
-\includegraphics[width=0.75\textwidth]{../figures/main/fig3a_prediction_overall.png}
-
-\vspace{0.6cm}
-
-% Panel B
-\raggedright\noindent\textbf{B}\par\vspace{4pt}
-\centering
-\includegraphics[width=0.95\textwidth]{../figures/main/fig3b_prediction_per_gene.png}
-
-\vspace{0.6cm}
-
-% Panel C
-\raggedright\noindent\textbf{C}\par\vspace{4pt}
-\centering
+\begin{flushleft}\textbf{A}\end{flushleft}\vspace{-0.3cm}
+\includegraphics[width=0.75\textwidth]{../figures/main/fig3a_prediction_overall.png}\\[0.5cm]
+\begin{flushleft}\textbf{B}\end{flushleft}\vspace{-0.3cm}
+\includegraphics[width=0.95\textwidth]{../figures/main/fig3b_prediction_per_gene.png}\\[0.5cm]
+\begin{flushleft}\textbf{C}\end{flushleft}\vspace{-0.3cm}
 \includegraphics[width=0.80\textwidth]{../figures/main/fig3c_trans_effect_gfi1b.png}
+\caption{\textbf{CDT-II predicts cell-level perturbation effects.} \textbf{(A)} Overall predicted versus observed log2 fold changes. \textbf{(B)} Per-gene pseudo-bulk correlations for five held-out genes (mean $r = 0.84$). \textbf{(C)} Trans-effect prediction for \textit{GFI1B}.}
+\label{../figures/main/fig:predictions}
+\end{../figures/main/figure}
 
-\caption{\textbf{CDT-II predicts cell-level perturbation effects.} \textbf{(A)} Overall scatter plot of predicted versus actual log2 fold changes across all validation cells ($n=2{,}037$ cells $\times$ 2,361 genes), showing Pearson $r=0.64$. Each point represents a cell-gene pair, with density indicated by color intensity. \textbf{(B)} Per-gene prediction performance for five validation genes (\textit{GFI}1\textit{B}, \textit{TNFSF}9, \textit{TFRC}, \textit{CD}44, \textit{CD}52), with pseudo-bulk correlations (mean across cells) ranging from 0.75 to 0.88 (mean $r=0.84$). \textbf{(C)} Trans-effect profile for \textit{GFI}1\textit{B}: mean predicted versus mean actual effects across all 2,361 genes, showing strong recovery of the perturbation-specific regulatory signature ($r=0.88$).}
-\label{fig:prediction}
-\end{figure}
+\subsection{Attention maps reveal the \textit{GFI1B} regulatory network}
 
-\subsection*{Attention maps reveal the \textit{GFI}1\textit{B} regulatory network}
+The RNA self-attention matrix captures learned co-regulatory relationships. Extracting the \textit{GFI1B} query row revealed biologically coherent rankings: cell cycle regulators including \textit{CDCA8}, \textit{CDC20}, \textit{KIF2C}, and \textit{KIF14} appeared in the top ranks, consistent with \textit{GFI1B}'s role in cell cycle control during hematopoietic differentiation [22].
 
-We next examined what CDT-II's attention maps reveal about \textit{GFI}1\textit{B}---a transcription factor held out entirely from training (\textbf{Fig.~4}).
+Ranking all 2,361 genes by \textit{GFI1B} attention weight and, independently, by absolute experimental effect size, we measured overlap between the top $N$ genes. At top 100, 28 genes appeared in both lists, representing 6.6-fold enrichment ($P = 3.5 \times 10^{-17}$ by hypergeometric test). This demonstrates that CDT-II's attention maps recover known regulatory relationships without supervision (Figs.~4 and 5).
 
-The attention analysis follows the central dogma flow. DNA self-attention (Fig.~4A) reveals how the model learns relationships between genomic positions within the 115 kb window centered on the perturbation site. DNA-to-RNA cross-attention (Fig.~4B) shows how each gene attends to specific genomic regions, capturing transcriptional regulatory relationships. RNA self-attention (Fig.~4C--D) captures co-regulatory relationships between genes, revealing the gene regulatory network structure.
-
-The RNA self-attention matrix [$2{,}361 \times 2{,}361$] captures learned co-regulatory relationships between genes. Extracting the \textit{GFI}1\textit{B} query row---representing which genes \textit{GFI}1\textit{B} ``attends to'' during inference---revealed a biologically coherent ranking. Cell cycle regulators including \textit{CDCA}8, \textit{CDC}20, \textit{KIF}2\textit{C}, and \textit{KIF}14 appeared in the top ranks, consistent with \textit{GFI}1\textit{B}'s established role in cell cycle control during hematopoietic differentiation\textsuperscript{15}.
-
-Visualizing the top 5\% of attention edges as a network (\textbf{Fig.~5A}) reveals \textit{GFI}1\textit{B} as a hub gene with multiple connection types: downstream targets (genes that \textit{GFI}1\textit{B} regulates), upstream regulators (genes that influence \textit{GFI}1\textit{B}), and bidirectional relationships suggesting reciprocal regulatory dynamics. This bidirectional structure captures the feedback loops characteristic of transcription factor networks.
-
-To quantify the correspondence between attention-derived and experimentally determined regulatory networks, we ranked all 2,361 genes by \textit{GFI}1\textit{B} attention weight and, independently, by absolute experimental effect size (mean $|\log_2\text{FC}|$ upon \textit{GFI}1\textit{B} perturbation\textsuperscript{12}), then measured overlap between the top $N$ genes from each ranking. At top 100, 28 genes appeared in both lists, representing a 6.6-fold enrichment over random expectation ($P = 3.5 \times 10^{-17}$ by hypergeometric test). This demonstrates that CDT-II's attention maps recover known regulatory relationships without supervision.
-
-Cell-to-cell variation in attention patterns revealed state-dependent regulatory networks (Fig.~4E). Across validation cells, pairwise correlations of \textit{GFI}1\textit{B} attention vectors showed a mean of $r = 0.75$, indicating that while the core network structure is preserved, CDT-II modulates attention weights based on each cell's expression state. This per-cell variation is a direct consequence of using raw expression as input---each cell's unique transcriptional profile generates a unique view through the AI microscope.
-
-% Figure 4 (Part 1: A-B)
-\begin{figure}[p]
-% Panel A
-\raggedright\noindent\textbf{A}\par\vspace{4pt}
+\begin{../figures/main/figure}[p]
 \centering
-\includegraphics[width=0.85\textwidth]{../figures/main/fig4a_dna_self_attention.png}
+\begin{flushleft}\textbf{A}\end{flushleft}\vspace{-0.3cm}
+\includegraphics[width=0.75\textwidth]{../figures/main/fig4a_dna_self_attention.png}\\[0.3cm]
+\begin{flushleft}\textbf{B}\end{flushleft}\vspace{-0.3cm}
+\includegraphics[width=0.75\textwidth]{../figures/main/fig4b_cross_attention_profiles.png}
+\caption{\textbf{DNA and cross-attention maps reveal regulatory structure.} \textbf{(A)} DNA self-attention for held-out genes showing genomic relationships within the $\pm$57 kb window. \textbf{(B)} Cross-attention profiles showing gene-by-position regulatory maps.}
+\label{../figures/main/fig:attention_dna}
+\end{../figures/main/figure}
 
-\vspace{0.4cm}
-
-% Panel B
-\raggedright\noindent\textbf{B}\par\vspace{4pt}
+\begin{../figures/main/figure}[p]
 \centering
-\includegraphics[width=0.85\textwidth]{../figures/main/fig4b_cross_attention_profiles.png}
-
-\vspace{0.3cm}
-
-\caption{\textbf{Attention maps reveal regulatory structure.} \textbf{(A)} DNA self-attention patterns across the 115 kb genomic window for two layers. \textbf{(B)} DNA-to-RNA cross-attention profiles for five TSS perturbations.}
-\label{fig:attention1}
-\end{figure}
-
-% Figure 4 (Part 2: C-E)
-\begin{figure}[p]
-% Panel C
-\raggedright\noindent\textbf{C}\par\vspace{4pt}
-\centering
-\includegraphics[width=0.7\textwidth]{../figures/main/fig4c_rna_self_per_head.png}
-
-\vspace{0.4cm}
-
-% Panel D
-\raggedright\noindent\textbf{D}\par\vspace{4pt}
-\centering
+\begin{flushleft}\textbf{A}\end{flushleft}\vspace{-0.3cm}
+\includegraphics[width=0.7\textwidth]{../figures/main/fig4c_rna_self_per_head.png}\\[0.5cm]
+\begin{flushleft}\textbf{B}\end{flushleft}\vspace{-0.3cm}
 \includegraphics[width=0.7\textwidth]{../figures/main/fig4d_rna_self_2d_heatmap.png}
+\caption{\textbf{RNA self-attention maps reveal gene co-regulation.} \textbf{(A)} Per-head attention patterns, showing distinct co-regulatory programs learned by each head. \textbf{(B)} 2D heatmap showing gene co-regulation structure across 2,361 genes.}
+\label{../figures/main/fig:attention2}
+\end{../figures/main/figure}
 
-\vspace{0.4cm}
+\subsection{Convergent attention reveals an RNA processing module}
 
-% Panel E
-\raggedright\noindent\textbf{E}\par\vspace{4pt}
+We applied Louvain community detection [16] to networks derived from each mechanism separately. From the RNA self-attention matrix, community C1 (679 genes) showed enrichment for RNA binding (Gene Ontology [17]; $P = 5 \times 10^{-16}$) and metabolism of RNA (Reactome [20]; $P = 2 \times 10^{-9}$). From the cross-attention matrix, community C3 (165 genes) showed even stronger enrichment for RNA binding ($P = 1 \times 10^{-16}$), spliceosome (KEGG [19]; $P = 4 \times 10^{-10}$), and mRNA splicing (Reactome [20]; $P = 2 \times 10^{-9}$).
+
+The striking finding is convergence: 132 of 165 cross-attention genes (80\%) were contained within the 679-gene self-attention community (2.8-fold enrichment over the 47.5 expected by chance; hypergeometric $P = 9.3 \times 10^{-46}$), despite being identified through fundamentally different mechanisms---one operating on gene-gene relationships, the other on gene-position relationships (Fig.~6).
+
+\begin{../figures/main/figure}[p]
 \centering
-\includegraphics[width=0.7\textwidth]{../figures/main/fig4e_cell_attention_variation.png}
-
-\vspace{0.3cm}
-
-\caption*{\textbf{Figure 4 (continued).} \textbf{(C)} RNA self-attention per-head analysis for \textit{GFI}1\textit{B}, showing that different attention heads capture distinct aspects of the regulatory network. \textbf{(D)} RNA self-attention 2D heatmap showing gene-gene co-regulatory relationships centered on \textit{GFI}1\textit{B} and its top-attended genes. \textbf{(E)} Cell-to-cell attention variation. Left: pairwise correlations of \textit{GFI}1\textit{B} attention vectors for 20 representative cells sampled from 477 validation cells (mean $r=0.75$ across all pairs), showing that core network structure is preserved while attention weights are modulated by each cell's expression state. Right: genes with the most variable attention across cells, representing cell-state-dependent regulatory targets.}
-\label{fig:attention2}
-\end{figure}
-
-\subsection*{Convergent attention reveals an RNA processing module}
-
-A notable finding emerged from comparing regulatory modules detected by CDT-II's two distinct attention mechanisms.
-
-We applied Louvain community detection\textsuperscript{16} to networks derived from each mechanism separately. From the RNA self-attention matrix, we identified community C1 (679 genes) with highly significant enrichment for RNA binding (Gene Ontology\textsuperscript{17} molecular function; $P = 5 \times 10^{-16}$) and metabolism of RNA (Reactome\textsuperscript{18}; $P = 2 \times 10^{-9}$). From the DNA-to-RNA cross-attention matrix---where gene similarity was computed based on shared attention to the same genomic regions---we identified community C3 (165 genes) with even stronger enrichment for RNA binding ($P = 1 \times 10^{-16}$), spliceosome (KEGG\textsuperscript{19}; $P = 4 \times 10^{-10}$), and mRNA splicing (Reactome\textsuperscript{18}; $P = 2 \times 10^{-9}$).
-
-The convergence between these independently derived modules was striking: 132 of 165 cross-attention genes (80\%) were contained within the 679-gene self-attention community (2.8-fold enrichment over the 47.5 expected by chance; hypergeometric $P = 9.3 \times 10^{-46}$). This core module of 132 genes spans multiple levels of RNA processing: spliceosome components (\textit{SF}3\textit{A}3, \textit{SF}3\textit{B}4, \textit{PRPF}3, \textit{SNRNP}27, \textit{SNRPG}, \textit{BCAS}2, \textit{RBM}8\textit{A}), RNA modification and decay factors (\textit{YTHDF}2 for m$^6$A reading, \textit{ADAR} for RNA editing, \textit{EXOSC}10 for exosome-mediated degradation, \textit{TUT}4 for uridylation, \textit{XPO}1 for nuclear export), chromatin regulators (\textit{HDAC}1, \textit{KDM}1\textit{A}/LSD1, \textit{ARID}1\textit{A} of the SWI/SNF complex), transcription machinery (\textit{CDC}73 of the PAF complex, \textit{TAF}12 of TFIID, \textit{TRIM}33), and translation initiation factors (\textit{EIF}2\textit{B}3, \textit{EIF}2\textit{B}4, \textit{EIF}4\textit{G}3).
-
-The biological interpretation of this convergence is hierarchical. RNA self-attention captures post-transcriptional co-regulation---genes whose expression levels co-vary in response to perturbation, reflecting shared regulatory mechanisms at the mRNA level. DNA-to-RNA cross-attention captures transcriptional co-regulation---genes that attend to the same genomic regions, suggesting shared upstream regulators encoded in DNA.
-
-That both mechanisms independently identify the same RNA processing module indicates that these genes are coordinately regulated at two distinct levels of the central dogma: they share transcriptional regulatory inputs (detected by cross-attention) and participate in the same post-transcriptional feedback networks (detected by self-attention) (\textbf{Fig.~5B--C}). Notably, while the architecture provides separate attention mechanisms, this convergence was not explicitly encouraged---it emerged from training on perturbation data alone.
-
-% Figure 5
-\begin{figure}[H]
-% Panel A
-\raggedright\noindent\textbf{A}\par\vspace{2pt}
-\centering
-\includegraphics[width=0.55\textwidth]{../figures/main/fig5_gfi1b_subnetwork.png}
-
-\vspace{0.2cm}
-
-% Panel B
-\raggedright\noindent\textbf{B}\par\vspace{2pt}
-\centering
-\includegraphics[width=0.75\textwidth]{../figures/main/fig5a_go_enrichment_comparison.png}
-
-\vspace{0.2cm}
-
-% Panel C
-\raggedright\noindent\textbf{C}\par\vspace{2pt}
-\centering
+\begin{flushleft}\textbf{A}\end{flushleft}\vspace{-0.3cm}
+\includegraphics[width=0.55\textwidth]{../figures/main/fig5_gfi1b_subnetwork.png}\\[0.3cm]
+\begin{flushleft}\textbf{B}\end{flushleft}\vspace{-0.3cm}
+\includegraphics[width=0.75\textwidth]{../figures/main/fig5a_go_enrichment_comparison.png}\\[0.3cm]
+\begin{flushleft}\textbf{C}\end{flushleft}\vspace{-0.3cm}
 \includegraphics[width=0.5\textwidth]{../figures/main/fig5b_venn_rna_module.png}
+\caption{\textbf{Convergent attention reveals an RNA processing module.} \textbf{(A)} \textit{GFI1B} regulatory subnetwork from RNA self-attention. \textbf{(B)} GO enrichment comparison between RNA self-attention and cross-attention communities. \textbf{(C)} Venn diagram showing 80\% gene overlap between two independent mechanisms (hypergeometric $P = 9.3 \times 10^{-46}$).}
+\label{../figures/main/fig:convergent}
+\end{../figures/main/figure}
 
-\caption{\textbf{\textit{GFI}1\textit{B} regulatory network and convergent attention on an RNA processing module.} \textbf{(A)} Network visualization of \textit{GFI}1\textit{B} regulatory relationships derived from the top 5\% of RNA self-attention edges. \textit{GFI}1\textit{B} (red, center) functions as a hub gene connected to downstream targets (blue), upstream regulators (orange), and genes with bidirectional relationships (purple). Edge thickness is proportional to attention weight. \textbf{(B)} GO enrichment comparison showing both attention mechanisms identify ``RNA Binding'' as the top enriched term. RNA self-attention community C1 (679 genes) and DNA-to-RNA cross-attention community C3 (165 genes) show highly significant enrichment for RNA processing functions. \textbf{(C)} Venn diagram showing 132-gene core overlap (80\% of cross-attention community). Core genes span spliceosome components, RNA processing factors, chromatin regulators, and transcription machinery.}
-\label{fig:network_convergent}
-\end{figure}
+\subsection{Cross-attention recovers known regulatory elements}
 
-\subsection*{Cross-attention recovers known regulatory elements}
+To test whether cross-attention learns genuine regulatory structure, we compared attention patterns against ENCODE regulatory annotations [21] for K562 cells (Fig.~7).
 
-To test whether CDT-II's cross-attention learns genuine regulatory structure, we compared attention patterns against ENCODE regulatory annotations\textsuperscript{20} for K562 cells (\textbf{Fig.~6}).
+Enformer [3], which provides CDT-II's DNA embeddings, was pre-trained on epigenomic tracks, so the initial embeddings already encode regulatory element positions. However, cross-attention does not operate on these raw embeddings: a projection layer and two DNA self-attention layers, trained end-to-end on perturbation prediction, substantially transform the representations before cross-attention.
 
-Enformer\textsuperscript{3}, which provides CDT-II's DNA embeddings, was pre-trained on epigenomic tracks including DNase-seq and histone ChIP-seq, so the initial embeddings already encode regulatory element positions. However, cross-attention does not operate on these raw embeddings: a projection layer and two DNA self-attention layers, all trained end-to-end on perturbation prediction, substantially transform the representations before cross-attention computes gene-specific regulatory maps (see Discussion).
+CDT-II's cross-attention showed striking correspondence with ENCODE regulatory elements. Of 25 gene--mark combinations, 24 were testable (CD44 $\times$ H3K27ac yielded no ENCODE peaks in the window); of these, 23 achieved Fisher's exact $P < 0.001$. The strongest enrichments were observed for DNase hypersensitive sites (\textit{GFI1B}: 201$\times$ odds ratio) and CTCF binding (\textit{CD52}: 28$\times$). H3K27ac enrichment was consistently high across four testable genes (range 4--11$\times$), confirming that cross-attention preferentially targets active regulatory regions [23]. Circular permutation tests ($n = 1{,}000$) confirmed that these enrichments are robust to spatial autocorrelation, and results remained significant across attention thresholds from top 5\% to top 20\%.
 
-For each of the five held-out genes, we extracted the mean cross-attention profile across validation cells, identifying the top 10\% of attended genomic bins (89 of 896 bins spanning the 115 kb window). We then overlapped these high-attention bins with ENCODE K562 peak calls for five regulatory marks: DNase I hypersensitivity (open chromatin), CTCF binding, H3K27ac (active enhancers), H3K4me1 (poised enhancers), and H3K4me3 (active promoters). Fisher's exact tests with Haldane correction were applied to each gene--mark combination (24 testable of 25; one combination, CD44 $\times$ H3K27ac, yielded no ENCODE peaks in the window).
-
-CDT-II's cross-attention showed striking correspondence with ENCODE regulatory elements. Of 24 testable gene--mark combinations, 23 achieved Fisher's exact $P < 0.001$ (Fig.~6A). The strongest enrichments were observed for DNase hypersensitive sites (\textit{GFI}1\textit{B}: 201$\times$ odds ratio) and CTCF binding (\textit{CD}52: 28$\times$), indicating that the model autonomously focuses on open chromatin and insulator elements. H3K27ac enrichment was consistently high across the four testable genes (range 4--11$\times$), confirming that cross-attention preferentially targets active regulatory regions.
-
-To assess statistical robustness, we performed circular permutation tests ($n = 1{,}000$), shifting attention profiles along the genomic axis while preserving their autocorrelation structure. Among the 15 combinations tested (DNase, CTCF, and H3K4me3 $\times$ 5 genes), 14 achieved permutation $P < 0.005$ (Supplementary Fig.~1a), confirming that the observed enrichments are not artifacts of attention smoothness or genomic feature clustering. Threshold robustness analysis showed that enrichments remained significant across a range of attention thresholds (top 5--20\%), with effect sizes varying smoothly rather than appearing only at a single arbitrary cutoff (Supplementary Fig.~1b).
-
-To further characterize what cross-attention captures, we classified each genomic bin by its ENCODE annotation---promoter (H3K4me3$^+$), active enhancer (H3K27ac$^+$ \& H3K4me3$^-$), CTCF-only, or unannotated---and compared attention weights across classes (Fig.~6B). Bin class separation was substantial: CTCF bins received significantly higher attention than unannotated bins (Cohen's $d = 2.4$), as did promoter bins ($d = 1.4$). Kruskal--Wallis tests confirmed highly significant differences across all bin classes ($P = 1 \times 10^{-45}$). Notably, CTCF-associated bins showed the most consistent gene-specificity signal, ranking as the most informative mark across all five genes by entropy analysis.
-
-These results demonstrate that CDT-II's task-driven training selects and organizes genomic information into gene-specific regulatory maps. The cross-attention mechanism, optimized solely to predict perturbation effects, converges on the same regulatory grammar catalogued by ENCODE---providing strong evidence that the AI microscope reveals genuine regulatory biology rather than statistical artifacts.
-
-% Figure 6
-\begin{figure}[H]
+\begin{../figures/main/figure}[H]
 \centering
 \includegraphics[width=\textwidth]{../figures/main/fig6_encode_validation.png}
-\caption{\textbf{Cross-attention recovers known regulatory elements.} \textbf{(A)} Enrichment heatmap showing odds ratios (Fisher's exact test) for overlap between CDT-II's top 10\% cross-attention bins and ENCODE K562 regulatory peaks across five held-out genes and five marks. 23 of 24 testable combinations achieve $P < 0.001$ (CD44 $\times$ H3K27ac yielded no peaks). \textbf{(B)} Violin plots of attention weights stratified by ENCODE bin class (promoter, active enhancer, CTCF, unannotated); black lines indicate means, red lines indicate medians. CTCF-associated bins show the largest separation from unannotated bins (Cohen's $d = 2.4$), with Kruskal--Wallis $P = 1 \times 10^{-45}$ across all classes. See Supplementary Fig.~1 for circular permutation tests and threshold robustness analysis.}
-\label{fig:encode}
-\end{figure}
+\caption{\textbf{Cross-attention recovers known regulatory elements.} \textbf{(A)} Fisher's exact test enrichment for five ENCODE K562 marks across five held-out genes. 23/24 combinations reach $P < 0.001$. \textbf{(B)} DNase and CTCF show the strongest enrichments (201$\times$ and 28$\times$).}
+\label{../figures/main/fig:encode}
+\end{../figures/main/figure}
 
-\section*{Discussion}
+\subsection{CTCF enrichment generalizes across 28 CRISPRi targets}
 
-CDT-II provides converging evidence supporting the AI microscope framework for biological discovery. At the prediction level, cell-level perturbation effects are reproduced with high fidelity (mean $r = 0.84$ across held-out genes), confirming that the instrument is properly calibrated. At the attention level, known regulatory networks are recovered without supervision (\textit{GFI}1\textit{B} enrichment 6.6$\times$, $P = 3.5 \times 10^{-17}$), and novel biological organization is revealed through convergent attention patterns (RNA processing module with 80\% gene overlap; RNA binding enrichment $P = 1 \times 10^{-16}$). The ENCODE enrichment analysis provides the strongest evidence for the AI microscope claim: cross-attention autonomously focuses on experimentally validated regulatory elements---DNase hypersensitive sites, CTCF insulators, and histone-marked enhancers and promoters---across all five held-out genes. Together, these observations establish CDT-II as an instrument whose outputs warrant biological interpretation, not merely statistical evaluation.
+To test whether cross-attention CTCF enrichment generalizes beyond the five held-out genes, we extracted cross-attention weights for all 28 CRISPRi target genes in the Morris dataset [11] and overlaid an independent ENCODE K562 CTCF ChIP-seq dataset (ENCFF796WRU), distinct from the one used in the 5-gene ENCODE analysis above.
 
-We note that Enformer's pre-training on epigenomic tracks across many cell types means the initial DNA embeddings encode \textit{general} regulatory element positions based on sequence alone---Enformer receives no cell-type information and produces identical embeddings regardless of cellular context. These cell-type-agnostic embeddings are then substantially transformed before cross-attention---through a learned projection layer and two DNA self-attention layers, all trained on K562 perturbation prediction---so the cross-attention maps reflect CDT-II's cell-type-specific, task-specific understanding rather than Enformer's general-purpose representations. The key finding is that this multi-layer transformation selects the \textit{gene-specific} regulatory elements relevant to each perturbation target \textit{in K562}, transforming Enformer's cell-type-agnostic genomic representation into an interpretable, gene-resolved regulatory map that aligns with K562 ENCODE annotations\textsuperscript{20}. More broadly, CDT-II is designed as an integration platform: its goal is not to outperform any individual component, but to combine pre-trained representations with experimental perturbation data and extract interpretable regulatory structure that neither source can provide alone. The DNA embedding module is deliberately modular---Enformer can be replaced with newer models such as AlphaGenome\textsuperscript{21} or Evo\textsuperscript{22}---so the relevant question is not how much information originates from any single component, but whether the integrated system produces biologically meaningful outputs.
+Cross-attention showed strong CTCF enrichment across essentially all genes: mean 7.67$\times$ (median 8.57$\times$), with 26/28 genes exceeding 2$\times$ and 21/28 exceeding 5$\times$ enrichment. Permutation testing ($n = 1{,}000$) confirmed statistical significance: observed 7.67$\times$ versus null $1.00 \pm 0.27$ ($P < 0.001$). Notable examples include TFRC (10.0$\times$), ITGB1 (10.0$\times$), ENTPD1 (10.0$\times$), and CD52 (8.6$\times$). The consistency of CTCF enrichment across both the original 5-gene analysis and this independent 28-gene validation with a different peak-call dataset confirms the robustness of this finding.
 
-The prominence of CTCF in cross-attention maps has implications for understanding three-dimensional chromatin organization. CTCF is a primary architectural protein that establishes topologically associating domain (TAD) boundaries and chromatin loop anchors, compartmentalizing the genome into regulatory neighborhoods\textsuperscript{23}. The finding that CTCF-associated bins receive the highest attention weights across all five held-out genes (Cohen's $d = 2.4$) and show the most consistent gene-specificity signal suggests that CDT-II may be learning aspects of three-dimensional regulatory structure from one-dimensional sequence information alone. This is particularly striking because the model receives no explicit chromatin conformation data---neither Hi-C contact maps nor TAD annotations. Future integration of chromatin conformation data could further sharpen this aspect of the AI microscope's resolution, potentially enabling direct visualization of gene-specific regulatory neighborhoods.
+This finding is particularly striking because the model receives no explicit chromatin conformation data. CTCF is a primary architectural protein establishing topologically associating domain (TAD) boundaries and chromatin loop anchors [24]. The consistent enrichment across 28 independent loci suggests that CDT-II learns aspects of three-dimensional chromatin organization from one-dimensional sequence data alone.
 
-The ablation study establishes a practically important principle: gene set quality, determined by cross-dataset reproducibility filtering, governs the resolution of the AI microscope. Training with 9,335 genes produced inferior predictions ($r = 0.37$), while 2,361 cross-dataset validated genes yielded both superior accuracy ($r = 0.64$) and interpretable attention maps. This finding has direct implications for applying CDT-II to new systems: researchers should prioritize genes whose perturbation effects are reproducible across independent experiments. The elimination of RNA and protein language model dependencies---a key design change from CDT v1\textsuperscript{10}---enables this flexibility by allowing researchers to work directly with raw per-cell expression rather than fixed embeddings.
+\subsection{Gradient-based attribution recovers regulatory relationships}
 
-Because per-cell RNA expression serves as model input, one might ask whether the model trivially reconstructs its input. This concern reflects a misunderstanding of CDT-II's task design. Crucially, the input is expression \textit{levels} (cellular state) while the output is expression \textit{changes} (perturbation effects)---fundamentally different quantities. The model receives no information about the unperturbed baseline, no pre-computed differences, and no indication of which genes will change. Furthermore, the same cell yields different predictions depending on which DNA locus is queried---the RNA input alone is insufficient without understanding its relationship to the perturbation site. To predict how gene B changes when locus A is perturbed, the model must learn the regulatory relationship between A and B; simply memorizing or reconstructing input expression patterns cannot solve this task.
+The preceding analyses demonstrate that CDT-II's attention maps capture biologically meaningful structure. However, attention weights reflect learned representations that are not straightforward to interpret as quantitative predictions of regulatory influence [28,29]. We therefore asked whether an independent interrogation method---input gradients---could extract quantitative regulatory relationships from the trained model.
 
-This task design creates a synergy with CDT-II's architecture. By providing raw expression as input and predicting expression changes as output---without pre-computing differences---we create a learning problem that \textit{requires} understanding regulatory relationships. Because CDT-II's architecture is explicitly structured by the central dogma, these learned relationships are channeled into interpretable attention mechanisms. The attention mechanisms---DNA self-attention, RNA self-attention, and DNA-to-RNA cross-attention---correspond to specific biological relationships: genomic interactions, gene co-regulation, and transcriptional control, respectively. The result is a system where improving prediction accuracy and discovering regulatory biology are the same optimization objective. This alignment explains why CDT-II's attention maps recover known biology without supervision: the task leaves no shortcut.
+As a complementary approach to attention maps, we computed the Jacobian matrix $J_{ji} = \partial(\text{predicted output}_j)/\partial(\text{RNA input}_i)$ for each held-out perturbation target (see Methods). The Jacobian captures the integrated sensitivity of the model's output to each RNA input gene across all layers, rather than the learned representation at any single layer. For each input gene, a gradient importance score---the mean $|J_{ji}|$ across the top 100 experimentally affected output genes---quantifies how strongly the model relies on that gene's expression to predict downstream perturbation effects.
 
-Three additional observations support this conclusion. First, gene-level holdout ensures that validation targets---including \textit{GFI}1\textit{B} and its entire regulatory network---are entirely absent from training; the model cannot have memorized these relationships. Second, adding noisier genes (9,335 versus 2,361) degraded rather than improved performance, the opposite of what would be expected if the model were simply memorizing input patterns. Third, and most strikingly, the biological coherence of unsupervised attention patterns provides direct evidence of genuine learning: the 6.6-fold enrichment for \textit{GFI}1\textit{B} targets ($P = 3.5 \times 10^{-17}$) means that the model independently discovered a regulatory network that was characterized through years of experimental work---without ever being trained on \textit{GFI}1\textit{B} perturbation data.
+We compared these gradient importance scores with experimental CRISPRi effect sizes (mean $|\log_2\text{FC}|$ across perturbed cells). Across all 2,361 genes, gradient-derived importance and experimental effect sizes showed strong agreement: mean Pearson $r = 0.82$ across five held-out genes (range 0.76--0.86; Fig.~8A). The top 20 genes by gradient importance (orange points in Fig.~8A) cluster along the regression line, indicating that the genes the model considers most influential are also those with the largest experimental effects. This correlation was consistent across genes with different numbers of perturbed cells and different effect magnitudes (Fig.~8B).
 
-The smooth learning dynamics observed during training provide additional evidence that CDT-II's architectural inductive bias aligns with biological reality. Throughout training, validation accuracy tracked training accuracy without divergence (train $r = 0.65$, val $r = 0.64$), indicating that the model learns generalizable patterns rather than memorizing training examples. This behavior contrasts sharply with conventional deep learning, where capacity-rich models typically overfit unless heavily regularized. We attribute this stability to the correspondence between model structure and biological mechanism: because CDT-II's information flow mirrors the actual central dogma---DNA encoding regulatory potential, RNA reflecting cellular state, cross-attention modeling transcriptional control---the optimization landscape contains a clear path toward solutions that generalize.
+The five held-out genes are themselves established or emerging therapeutic targets: \textit{TFRC} (CD71) is an antibody--drug conjugate (ADC) target in acute leukemia, \textit{CD52} is the target of alemtuzumab in chronic lymphocytic leukemia and multiple sclerosis, \textit{CD44} is targeted by multiple antibodies in clinical development for acute myeloid leukemia, \textit{TNFSF9} (4-1BB ligand) is an immuno-oncology target, and \textit{GFI1B} is a hematopoietic transcription factor implicated in leukemogenesis. That gradient-based attribution accurately predicts the downstream transcriptional consequences of perturbing each of these targets ($r = 0.76$--$0.86$) has direct translational relevance: the gradient importance profile for a drug target gene provides a computational prediction of which pathways will be affected by therapeutic intervention, enabling virtual screening for on-target efficacy and off-target effects before committing to costly experimental validation.
 
-A notable feature of CDT-II is its architectural simplicity. The model uses only standard transformer components---self-attention, cross-attention, and feed-forward layers---without specialized modules, custom loss functions, or complex training procedures. This simplicity is deliberate: by constraining the architecture to mirror the central dogma rather than adding complexity, each attention mechanism retains a clear biological interpretation. In contrast, more complex architectures often sacrifice interpretability for marginal performance gains. CDT-II demonstrates that biological insight can emerge from standard components when they are structured to reflect biological organization. This approach parallels the interpretability-by-design principle demonstrated by BPNet\textsuperscript{24} for transcription factor binding, extended here to multi-modal regulatory network inference.
+This result has three important implications. First, it provides independent validation that CDT-II has learned genuine regulatory relationships---the gradient method queries the model through a completely different mechanism than attention maps, yet recovers the same biological structure. Second, it establishes gradient-based attribution as a practical tool for virtual regulatory screening: for any gene with Enformer embeddings, the gradient importance profile predicts which downstream genes will be most affected by perturbation, without requiring new experiments. Third, for therapeutic targets, gradient profiles offer a principled approach to anticipating the transcriptional consequences of drug action---identifying not only which genes respond most strongly (potential efficacy biomarkers) but also which unexpected pathways are affected (potential side effects or opportunities for combination therapy).
 
-Several limitations should be noted. CDT-II's pseudo-bulk correlation (mean $r = 0.84$) surpasses the inter-experimental reproducibility ceiling ($r \approx 0.79$ between Morris et al. and Gasperini et al. screens\textsuperscript{10,12,14}), suggesting that the remaining per-cell prediction gap ($r = 0.64$) largely reflects irreducible single-cell stochasticity and inter-experimental variability rather than model limitations. While in silico knockdown experiments---setting gene expression to zero---yielded weak correlations ($r \approx 0.07$), this reflects the challenge of extrapolating far outside the training distribution rather than a failure to learn regulatory relationships. In contrast, gradient-based attribution ($\partial \text{output}_j / \partial \text{input}_i$), which measures local sensitivity within the training distribution, achieved $r = 0.83$ correlation with experimental effect sizes. This demonstrates that CDT-II accurately captures regulatory relationships when queried appropriately, and suggests that gradient-based virtual screening---predicting the direction and relative magnitude of perturbation effects---may be more practical than simulating complete knockdowns. The 2,361-gene set excludes some known \textit{GFI}1\textit{B} targets (\textit{INSIG}1, \textit{NPM}1, \textit{BNIP}3), and all experiments were conducted in K562 cells from a single dataset. Finally, attention weights require careful interpretation\textsuperscript{25,26}; we mitigate this concern through external validation (6.6-fold enrichment) rather than relying on attention as post-hoc explanation, but attention should not be interpreted as causal without experimental follow-up. We note that direct comparison with perturbation prediction methods such as GEARS\textsuperscript{6,27} and CPA\textsuperscript{7} is not applicable: those methods aim to predict the effects of \textit{unseen} perturbations without experimental data, whereas CDT-II uses experimental perturbation data to reveal interpretable regulatory structure---fundamentally different objectives requiring different evaluation criteria. Similarly, network inference methods such as SCENIC\textsuperscript{28} and CellOracle\textsuperscript{29} reconstruct regulatory networks from observational data; CDT-II complements these by deriving regulatory structure from perturbation responses, grounding network edges in causal experimental data.
+Notably, conventional in silico knockdown---setting a gene's expression to zero and observing predicted changes---yielded much weaker correlations ($r \approx 0.07$). This contrast highlights a critical distinction for drug target assessment: in silico knockdown simulates complete target ablation, an extreme state far outside the training distribution that produces unreliable predictions. Gradient analysis instead queries the model locally within the training distribution, faithfully recovering the regulatory relationships the model has learned. In therapeutic terms, this mirrors the difference between total gene knockout and the partial modulation achieved by most drugs.
 
-A distinctive feature of the AI microscope framework is that its outputs generate experimentally testable hypotheses. The CTCF binding sites and enhancer elements identified by cross-attention (Fig.~6) represent specific genomic loci that can be validated through targeted CRISPRi experiments, and the gene regulatory edges recovered by RNA self-attention (Fig.~5) predict specific regulatory relationships testable by individual gene knockdowns. This creates a feedback cycle: experimental validation of attention-derived hypotheses not only tests the model but also generates new training data that can improve its resolution. As genomic foundation models continue to advance, CDT-II provides a means for experimentalists to interrogate, validate, and refine these models' representations through their own data---closing the loop between computational prediction and experimental biology.
+\subsection{TFRC case study: predicting anti-TfR1 antibody effects}
 
-Looking ahead, CDT-II opens several avenues for biological discovery. First, gradient-based virtual screening ($r = 0.83$ with experimental effects) could enable computational prioritization of perturbation experiments: by computing input gradients for any genomic locus in a trained model, researchers could rank regulatory targets by predicted effect magnitude before committing experimental resources. Second, the growing availability of genome-scale perturbation atlases\textsuperscript{30} across multiple cell types provides an immediate path for testing whether regulatory networks are cell-type-specific or conserved, potentially revealing shared regulatory modules across lineages. Third, integration of additional modalities---scATAC-seq for chromatin accessibility, DNA methylation for epigenetic state, or spatial transcriptomics for tissue context---could further sharpen the microscope's resolution by providing the model with richer cellular context. Fourth, CDT-II's modular architecture allows the DNA embedding component to be upgraded as genomic foundation models improve; Enformer could be replaced with more recent models such as AlphaGenome\textsuperscript{21} or Evo\textsuperscript{22}, potentially improving the resolution of DNA-mediated regulatory predictions without retraining the entire system. Finally, because CDT-II learns from perturbation data rather than observational correlations, it may capture causal regulatory relationships that could inform therapeutic target identification in disease contexts.
+To illustrate the translational potential of gradient analysis, we examined the Jacobian regulatory map for \textit{TFRC} (CD71, transferrin receptor 1), the target of PPMX-T003, an anti-TfR1 monoclonal antibody currently in Phase~1 clinical trials for polycythemia vera [36]. The Jacobian heatmap (Fig.~9) visualizes the regulatory relationships under TFRC perturbation: rows represent the top 100 output genes most affected by TFRC knockdown in the CRISPRi experiment, columns represent the top 50 input genes whose expression most strongly influences the model's predictions, and color intensity indicates the strength of regulatory coupling between each gene pair.
 
-CDT-II reframes the central question of biological AI from ``what does the model predict?'' to ``what does the model reveal?'' By grounding the architecture in the central dogma and using prediction as calibration rather than objective, CDT-II establishes a paradigm in which AI systems serve as observational instruments for biology---complementing, rather than replacing, the expertise of the researcher. The microscope did not replace the biologist's eye; it extended what the eye could see. CDT-II aims to do the same for regulatory networks that are invisible to any single experimental assay.
+Table~1 categorizes all 30 top-ranking input genes by functional pathway. Of the 30 genes, 24 can be linked to known consequences of iron depletion or TfR1 inhibition: oxidative stress and ferroptosis (4 genes), iron-dependent DNA synthesis and repair (3), erythrocyte structure and cytoskeleton (2), immune surface molecules (3), mitochondrial metabolism (2), ER stress and protein homeostasis (5), hematopoietic differentiation (1), vesicle trafficking (1), cell survival signaling (1), and RNA processing (2). The remaining 6 genes involve general transcription and chromatin functions, consistent with the broad growth arrest expected from iron deprivation.
 
-\section*{Online Methods}
+Several of these categories correspond directly to PPMX-T003's reported findings: the erythrocyte/cytoskeleton genes (\textit{EPB41}, \textit{ACTR2}) are consistent with the anemia observed in the Phase~1 trial (sustained decreases in hemoglobin and hematocrit from day~7) [36]; the iron-dependent DNA synthesis genes (\textit{RRM2}, \textit{RPA2}, \textit{UBE2T}) explain the $>$50\% reticulocyte decrease by day~3 [36]; the oxidative stress cluster (\textit{GCLM}, \textit{MGST3}, \textit{PGD}, \textit{SH3BGRL3}) aligns with the ferroptosis mechanism demonstrated in preclinical studies [37]; the immune surface molecules (\textit{CD46}, \textit{PTPRC}, \textit{CD53}) are potentially relevant to the infusion-related reactions observed in five participants [36]; and the ER stress genes (\textit{PDIA6}, \textit{SSR2}, \textit{TMCO1}, \textit{RTN4}, \textit{PSMB4}) point to proteostatic consequences of iron depletion not yet characterized clinically.
 
-\subsection*{Data sources and preprocessing}
+These associations emerge entirely from CDT-II's learned regulatory structure without any clinical data as input. The gradient analysis produces a comprehensive regulatory map across all 2,361 genes for any perturbation target---the clinical correspondences highlighted here represent a small fraction of the full output. Five of the ten functional categories in Table~1 correspond directly to PPMX-T003 clinical or preclinical findings---infusion-related reactions, ferroptosis, reticulocyte decrease, anemia, and iron-dependent metabolic disruption---serving as a calibration check that confirms the model has learned biologically correct regulatory structure. The remaining categories, including an ER stress signature (5 genes) and hematopoietic differentiation, represent predictions that extend beyond current clinical characterization of TfR1 inhibition.
 
-\textbf{Primary CRISPRi dataset.} We used the STING-seq v2 dataset\textsuperscript{12} (GEO accession GSE171452), which profiled 60,505 K562 cells using single-cell RNA sequencing combined with CRISPR interference\textsuperscript{11,31}. Perturbations targeted 447 genomic loci: 27 transcription start sites (TSS) and 420 single-nucleotide polymorphism (SNP) loci. Because the screen is highly multiplexed (mean 93 guides per cell), most cells lacked sufficient guide RNA signal for unambiguous assignment; cells were retained only if exactly one target gene had UMI $\geq 50$ with no competing signal, yielding 10,328 assignable cells (8,250 TSS-perturbed and 2,078 NTC) from the original 60,505. Non-targeting control (NTC) cells ($n = 2{,}078$) served as the unperturbed baseline. An additional 7,407 SNP-perturbed cells (420 loci) were used with guide assignments from the original publication\textsuperscript{12}.
+\begin{table}[H]
+\centering
+\footnotesize
+\caption{\textbf{Top 30 genes by gradient importance under TFRC perturbation, grouped by functional category.} Genes are ranked by gradient importance (GI) score = mean $|J_{ji}|$ across the top 100 output genes. Categories reflect known roles in iron biology and cellular responses to iron depletion. Clinical relevance indicates correspondence with PPMX-T003 Phase~1 findings [36] and preclinical studies [37].}
+\label{tab:tfrc_top30}
+\begin{tabular}{clll}
+\toprule
+\textbf{Rank} & \textbf{Gene} & \textbf{Functional category} & \textbf{Clinical relevance} \\
+\midrule
+1 & \textit{CD46} & Immune surface molecule & Infusion reactions \\
+8 & \textit{CD53} & Immune surface molecule & Infusion reactions \\
+10 & \textit{PTPRC} & Immune surface molecule & Infusion reactions \\
+\midrule
+6 & \textit{MGST3} & Oxidative stress / ferroptosis & Ferroptosis (preclinical) \\
+13 & \textit{GCLM} & Oxidative stress / ferroptosis & Ferroptosis (preclinical) \\
+21 & \textit{PGD} & Oxidative stress / ferroptosis & Ferroptosis (preclinical) \\
+29 & \textit{SH3BGRL3} & Oxidative stress / ferroptosis & Ferroptosis (preclinical) \\
+\midrule
+26 & \textit{RRM2} & Iron-dependent DNA synthesis & Reticulocyte decrease \\
+25 & \textit{RPA2} & DNA replication / repair & Reticulocyte decrease \\
+27 & \textit{UBE2T} & DNA repair (Fanconi anemia) & Reticulocyte decrease \\
+\midrule
+12 & \textit{EPB41} & Erythrocyte cytoskeleton & Anemia \\
+30 & \textit{ACTR2} & Actin cytoskeleton & Anemia \\
+\midrule
+3 & \textit{HADHA} & Mitochondrial metabolism & Iron-dependent \\
+9 & \textit{NRDC} & Metalloprotease & Iron-dependent \\
+\midrule
+4 & \textit{PDIA6} & ER stress / protein homeostasis & --- \\
+16 & \textit{SSR2} & ER protein translocation & --- \\
+22 & \textit{TMCO1} & ER calcium homeostasis & --- \\
+24 & \textit{PSMB4} & Proteasome & --- \\
+28 & \textit{RTN4} & ER structure & --- \\
+\midrule
+5 & \textit{HES4} & Hematopoietic differentiation & --- \\
+11 & \textit{RAB10} & Vesicle trafficking (TfR1 recycling) & --- \\
+18 & \textit{CCDC88A} & Cell survival (PI3K-Akt) & --- \\
+\midrule
+2 & \textit{RSRP1} & RNA processing & --- \\
+19 & \textit{SYF2} & RNA splicing & --- \\
+\midrule
+7 & \textit{PITHD1} & General transcription / chromatin & --- \\
+14 & \textit{GNAI3} & G protein signaling & --- \\
+15 & \textit{TAF12} & Transcription & --- \\
+17 & \textit{HMGN2} & Chromatin structure & --- \\
+20 & \textit{PDE4DIP} & Centrosome & --- \\
+23 & \textit{NOC2L} & Transcriptional repression & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-\textbf{Gene set curation.} The 2,361-gene set was derived by intersecting genes detected as expressed in both an independent K562 CRISPRi screen\textsuperscript{14} and the primary STING-seq dataset\textsuperscript{12}. This cross-dataset reproducibility filter yielded 2,360 genes. \textit{GFI}1\textit{B} was added as a 2,361st gene based on its established role as a master transcriptional regulator with hundreds of characterized trans-regulatory targets across the transcriptome in the primary dataset\textsuperscript{12}, providing a critical test case for unsupervised network recovery.
+\begin{../figures/main/figure}[H]
+\centering
+\begin{flushleft}\textbf{A}\end{flushleft}\vspace{-0.3cm}
+\includegraphics[width=0.85\textwidth]{../figures/main/fig8a_gradient_vs_experimental_scatter.png}\\[0.5cm]
+\begin{flushleft}\textbf{B}\end{flushleft}\vspace{-0.3cm}
+\includegraphics[width=0.55\textwidth]{../figures/main/fig8b_gradient_correlation_per_gene.png}
+\caption{\textbf{Gradient-based attribution recovers experimental regulatory relationships.} \textbf{(A)} Scatter plot of gradient importance (mean $|\partial\text{output}/\partial\text{input}|$) versus experimental effect size (mean $|\log_2\text{FC}|$) for 2,361 genes under \textit{GFI1B} perturbation (Pearson $r = 0.86$). Orange points: top 20 genes by gradient importance. Note: CD44, TFRC, and TNFSF9 are among the 28 CRISPRi target genes but fall outside the 2,361-gene expression input set and therefore have no gradient importance scores. \textbf{(B)} Gradient--experimental correlation for each of the five held-out perturbation targets (mean $r = 0.82$).}
+\label{../figures/main/fig:gradient}
+\end{../figures/main/figure}
 
-\textbf{Cell-level effect computation.} For each perturbed cell $c$ and gene $g$, the log2 fold change was computed as:
-\begin{equation}
-y_{cg} = \log_2 \frac{x_{cg} + 1}{\bar{x}_{g}^{\text{NTC}} + 1}
-\end{equation}
-where $x_{cg}$ is the CPM-normalized expression of gene $g$ in cell $c$, and $\bar{x}_{g}^{\text{NTC}}$ is the mean CPM expression of gene $g$ across all 2,078 non-targeting control cells. This per-cell computation preserves individual cell-state variation rather than collapsing to pseudo-bulk effect sizes.
+\begin{../figures/main/figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{../figures/main/fig9_jacobian_heatmap_TFRC.png}
+\caption{\textbf{Jacobian regulatory map for TFRC perturbation.} Clustered heatmap of $|\partial(\text{output gene})/\partial(\text{RNA input gene})|$ under \textit{TFRC} perturbation. Rows: top 100 output genes most affected by TFRC knockdown in the CRISPRi experiment (ranked by experimental $|\log_2\text{FC}|$). Columns: top 50 input genes whose expression most strongly influences the model's predictions (ranked by gradient importance). Color: regulatory influence strength (blue: minimal; red: strong). Hierarchical clustering (Ward's method, correlation distance) reveals modules of co-regulated genes. Red gene labels: held-out validation genes; blue labels: CRISPRi target genes.}
+\label{../figures/main/fig:jacobian_tfrc}
+\end{../figures/main/figure}
 
-\textbf{DNA embeddings.} Pre-computed Enformer\textsuperscript{3} embeddings of shape [896, 3,072] were generated for each perturbation locus, centered on either the TSS or SNP position, spanning approximately 115 kilobases at 128-base-pair resolution.
+\section{Discussion}
 
-\textbf{Data splits.} Training comprised 13,620 cells: 6,213 TSS-perturbed cells (22 genes) and 7,407 SNP-perturbed cells (420 loci). Validation comprised 2,037 cells from five TSS-perturbed genes held out at the gene level: \textit{GFI}1\textit{B} (477 cells), \textit{TFRC} (847 cells), \textit{TNFSF}9 (349 cells), \textit{CD}44 (233 cells), and \textit{CD}52 (131 cells). Gene-level holdout ensures that all cells associated with a validation gene are excluded from training, preventing information leakage.
+CDT-II demonstrates that structuring a neural network to mirror the central dogma produces an ``AI microscope'' whose attention maps recover known regulatory relationships. The key design principle is that each attention mechanism corresponds to a specific biological relationship, making learned representations directly interrogable.
 
-\subsection*{Model architecture}
+Enformer's pre-training on epigenomic tracks means the initial DNA embeddings encode \textit{general} regulatory element positions based on sequence alone---Enformer receives no cell-type information. These cell-type-agnostic embeddings are then substantially transformed through a learned projection layer and two DNA self-attention layers, all trained on K562 perturbation prediction. The cross-attention maps therefore reflect CDT-II's cell-type-specific understanding rather than Enformer's general-purpose representations. CDT-II is designed as an integration platform: its DNA embedding module is deliberately modular---Enformer can be replaced with newer models such as AlphaGenome [25] or Evo [26].
 
-The CDT-II architecture (Fig.~1) follows the design principles established in CDT v1\textsuperscript{10}, with key modifications for raw expression input. The RawExpressionEncoder combines learned gene identity embeddings with projected log1p(CPM) expression values to produce gene-level representations. Enformer DNA embeddings are projected from 3,072 to 512 dimensions. All attention operations use standard scaled dot-product attention\textsuperscript{13} with 8 heads, embedding dimension $d = 512$, FFN hidden dimension $4d = 2{,}048$, GELU activation, and dropout $p = 0.3$. DNA representations pass through 2 self-attention layers; RNA representations pass through 1 self-attention layer followed by 1 cross-attention layer (RNA queries, DNA keys/values). The Virtual Cell Embedder\textsuperscript{10} uses 4-head attention pooling to compress each modality into a fixed-dimensional vector, which are concatenated and fused via MLP. A two-layer task head predicts log2 fold changes for all 2,361 genes. Total parameters: $\sim$21 million.
+The CTCF enrichment result (mean 7.67$\times$ across 28 genes, $P < 0.001$) has implications for understanding three-dimensional chromatin organization. That the model, receiving only one-dimensional sequence embeddings and expression data, autonomously highlights CTCF-associated architectural sites suggests emergent learning of chromatin topology. This aligns with the finding that CTCF-associated bins receive the highest attention weights across all five held-out genes (Cohen's $d = 2.4$) in the ENCODE analysis. Future integration of Hi-C contact data could further validate this observation.
 
-\subsection*{Training procedure}
+The ablation study establishes a practically important principle: gene set quality, determined by cross-dataset reproducibility filtering, governs model resolution. Training with 9,335 genes produced $r = 0.37$, while 2,361 validated genes yielded $r = 0.64$ with interpretable attention maps. This has direct implications for applying CDT-II to new systems.
 
-CDT-II was trained to minimize mean squared error (MSE) between predicted and observed per-cell log2 fold changes:
-\begin{equation}
-\mathcal{L} = \frac{1}{|\mathcal{B}|} \sum_{c \in \mathcal{B}} \frac{1}{G} \sum_{g=1}^{G} (\hat{y}_{cg} - y_{cg})^2
-\end{equation}
-where $\hat{y}_{cg}$ is the predicted log2 fold change for gene $g$ in cell $c$, $y_{cg}$ is the observed value, $G = 2{,}361$, and $\mathcal{B}$ is a mini-batch. We used the AdamW\textsuperscript{32} optimizer (learning rate $1 \times 10^{-4}$, weight decay $1 \times 10^{-5}$) with ReduceLROnPlateau scheduling (factor 0.5, patience 10 epochs, monitoring validation loss). Gradient norms were clipped to a maximum of 1.0. Batch size was 64. Training was performed on a single NVIDIA A100 GPU (40 GB).
+CDT-II's architectural simplicity is deliberate: only standard transformer components are used, without specialized modules, custom loss functions, or complex training procedures. This parallels the interpretability-by-design principle demonstrated by BPNet [27] for transcription factor binding, extended here to multi-modal regulatory network inference.
 
-\subsection*{Attention map extraction}
+Several limitations should be noted. While in silico knockdown yielded weak correlations ($r \approx 0.07$), gradient-based attribution achieved mean $r = 0.82$ across all five held-out genes, demonstrating that CDT-II captures regulatory relationships when queried appropriately within the training distribution. The 2,361-gene set excludes some known \textit{GFI1B} targets, and all experiments used K562 cells. Attention weights require careful interpretation [28,29]; we mitigate this through external validation rather than relying on attention as post-hoc explanation. Direct comparison with perturbation prediction methods such as GEARS [30,31] and CPA [32] is not applicable: those methods predict effects of \textit{unseen} perturbations without experimental data, whereas CDT-II uses experimental data to reveal interpretable regulatory structure. Similarly, network inference methods such as SCENIC [33] and CellOracle [34] reconstruct networks from observational data; CDT-II complements these by deriving structure from perturbation responses.
 
-\textbf{RNA self-attention.} Attention weights [$n_\text{genes} \times n_\text{genes}$] were extracted from the RNA self-attention layer for each cell. For genome-wide analyses, attention weights were averaged across all 8 heads and across validation cells. For cell-to-cell variation analyses, per-cell attention vectors for specific query genes (e.g., \textit{GFI}1\textit{B}) were compared using Pearson correlation.
+Together, the \textit{GFI1B} and \textit{TFRC} analyses illustrate complementary uses of the AI microscope. Attention analysis of \textit{GFI1B} validates CDT-II's ability to recover known regulatory networks---the 6.6-fold enrichment, ENCODE correspondence, and convergent RNA processing module all confirm that the instrument's ``lenses'' produce biologically faithful images. Gradient analysis of \textit{TFRC} then demonstrates translational application: the same instrument, applied to a therapeutic target, generates a genome-wide regulatory map that both aligns with clinical observations and extends beyond them. The two analyses use different interrogation methods (attention versus gradients) on different genes, yet converge on the same conclusion: CDT-II has internalized genuine regulatory structure.
 
-\textbf{DNA-to-RNA cross-attention.} Attention weights [$n_\text{genes} \times 896$] were extracted from the cross-attention layer, representing each gene's attention to the 896 genomic positions. Gene-gene similarity was computed as the cosine similarity between pairs of cross-attention vectors, yielding an indirect gene-gene regulatory similarity matrix based on shared genomic attention patterns.
+CDT-II's outputs generate experimentally testable hypotheses: the CTCF binding sites and enhancer elements identified by cross-attention represent specific genomic loci validatable through targeted experiments [23], creating a feedback cycle between computational prediction and experimental biology.
 
-\subsection*{ENCODE enrichment analysis}
+Gradient analysis complements attention maps by capturing the integrated sensitivity across all model layers rather than learned representations at a single layer. That gradient importance correlates with experimental effect sizes (mean $r = 0.82$) independently validates that CDT-II has learned genuine regulatory relationships, and the Jacobian heatmap (Fig.~9) reveals co-regulated modules within these relationships.
 
-Cross-attention profiles were compared against ENCODE K562 regulatory annotations\textsuperscript{20} to assess whether attention autonomously focuses on known regulatory elements. Five ENCODE K562 peak-call datasets were used: CTCF ChIP-seq (ENCFF769AUF), H3K27ac ChIP-seq (ENCFF864OSZ), H3K4me1 ChIP-seq (ENCFF135ZLM), H3K4me3 ChIP-seq (ENCFF313FYW), and DNase-seq (ENCFF422QRZ).
+The TFRC case study demonstrates this approach's translational potential. The correspondence between gradient predictions and PPMX-T003 clinical and preclinical findings across five of ten functional categories (Table~1) serves as a calibration check, confirming biological accuracy. The majority of the 2,361-gene regulatory map constitutes new predictions---for example, the ER stress cluster (PDIA6, SSR2, TMCO1, RTN4, PSMB4) predicts proteostatic disruption as a downstream consequence of TfR1 inhibition, a finding not yet characterized clinically and testable in future studies. This illustrates the AI microscope paradigm: known biology validates the instrument's calibration, after which the full regulatory map can be examined for novel insights.
 
-\textbf{Enrichment testing.} For each held-out gene, the mean cross-attention profile (averaged across validation cells and 8 attention heads) was computed over the 896 genomic bins. Bins in the top 10\% of attention weight were designated as ``high-attention.'' Each ENCODE peak file was intersected with the 896-bin coordinate system, and Fisher's exact tests were computed for each gene--mark combination (25 tests: 5 genes $\times$ 5 marks). Odds ratios were Haldane-corrected (adding 0.5 to each cell of the $2 \times 2$ table) to handle zero cells and provide finite 95\% confidence intervals. All 23 significant $P$ values were below $1 \times 10^{-3}$, well within the Bonferroni-corrected threshold of $0.05/25 = 0.002$.
+Importantly, this analysis is immediately applicable to any perturbation target with Enformer embeddings. All five held-out genes are established or emerging drug targets---\textit{CD52} (alemtuzumab), \textit{CD44} (anti-CD44 antibodies), \textit{TNFSF9} (4-1BB agonists), and \textit{GFI1B} (leukemia therapeutic target)---enabling systematic comparison of pathway consequences across candidates before clinical investment. Extension to multiple cell types via genome-scale perturbation atlases [10,35] and integration of protein-level measurements could further sharpen this resolution.
 
-\textbf{Circular permutation test.} To control for spatial autocorrelation in both attention profiles and ENCODE peaks, we performed circular permutation tests ($n = 1{,}000$). In each permutation, the attention profile was circularly shifted by a random offset along the genomic axis, preserving the autocorrelation structure of the attention signal while disrupting its alignment with ENCODE peaks. The observed enrichment was compared against the null distribution to obtain permutation $P$ values.
-
-\textbf{Bin classification and effect sizes.} Each genomic bin was classified into one of four categories based on ENCODE annotations: promoter (H3K4me3$^+$), active enhancer (H3K27ac$^+$ \& H3K4me3$^-$), CTCF-only (CTCF$^+$ \& H3K4me3$^-$ \& H3K27ac$^-$), or unannotated (no peaks). Attention weights were compared across bin classes using Kruskal--Wallis tests. Pairwise effect sizes between each annotated class and unannotated bins were quantified using Cohen's $d$.
-
-\subsection*{Network analysis}
-
-\textbf{Graph construction.} Gene-gene networks were constructed from attention matrices by retaining edges above the top 5\% attention weight threshold.
-
-\textbf{Community detection.} Louvain community detection\textsuperscript{16} (resolution parameter = 1.0, the default) was applied to identify modules of co-regulated genes. For RNA self-attention, this yielded 5 communities; for cross-attention similarity, 53 communities (reflecting finer-grained structure).
-
-\textbf{GO enrichment.} Gene Ontology\textsuperscript{17} and pathway enrichment was performed using the Enrichr\textsuperscript{33} API against Gene Ontology Molecular Function, KEGG\textsuperscript{19}, and Reactome\textsuperscript{18} databases. $P$ values were corrected for multiple testing using the Benjamini--Hochberg procedure.
-
-\textbf{Hypergeometric test.} Overlap between top $N$ attention-ranked genes and top $N$ experimentally ranked genes (by absolute mean log2FC upon \textit{GFI}1\textit{B} perturbation) was evaluated using the hypergeometric test: $P(X \geq k)$ where $M = 2{,}361$ (universe), $K = N$ (top experimental targets), $n = N$ (top attention targets), and $k$ = observed overlap. The enrichment fold change was computed as $k / (N^2 / M)$. This symmetric comparison avoids the need to define an arbitrary significance threshold for ``known targets.''
-
-\subsection*{Gradient analysis}
-
-Input gradients $\partial(\text{output}_j)/\partial(\text{input}_i)$ were computed for each gene pair using backpropagation through the full model. Gradient magnitudes were averaged across validation cells to produce a gene-gene gradient matrix complementary to the attention-derived network. To validate that gradients capture regulatory relationships, we compared gradient-derived rankings with experimental effect sizes (mean $|\log_2\text{FC}|$ per gene pair). This yielded Pearson $r = 0.83$, indicating that CDT-II's gradients accurately predict the magnitude of regulatory effects. Comparison between gradient and attention rankings used Pearson correlation and top-$N$ overlap analysis, revealing complementary but correlated views of regulatory structure ($r = 0.27$ between methods).
-
-\subsection*{Ablation study}
-
-Two principal training configurations were compared. The full gene set configuration used 9,335 genes detected in at least 10\% of cells in the primary dataset\textsuperscript{12} (excluding mitochondrial, ribosomal, and hemoglobin genes), applying a single-dataset expression threshold. The filtered gene set configuration used 2,361 genes derived from a cross-dataset reproducibility filter (intersection of two independent CRISPRi screens\textsuperscript{12,14}) plus \textit{GFI}1\textit{B}. Both configurations used identical cell splits (13,620 training, 2,037 validation), architecture template, and hyperparameters; parameter counts differed due to gene set size ($\sim$21 million vs $\sim$54 million). Learning curves were compared on the same validation cell set using Pearson $r$.
-
-\subsection*{Code and data availability}
-
-CDT-II source code is available at \url{https://github.com/nobusama/CDT2}. Enformer embeddings, processed training data, and trained model weights are available at \url{https://huggingface.co/datasets/nobusama17/CDT2-data}. The STING-seq v2 dataset is available from the original publication\textsuperscript{12}. CDT v1 is described in ref.~10.
-
-\section*{References}
-
-\begin{enumerate}
-\small
-\item Crick, F. Central dogma of molecular biology. \textit{Nature} \textbf{227}, 561--563 (1970).
-\item Jumper, J. et al. Highly accurate protein structure prediction with AlphaFold. \textit{Nature} \textbf{596}, 583--589 (2021).
-\item Avsec, \v{Z}. et al. Effective gene expression prediction from sequence by integrating long-range interactions. \textit{Nat. Methods} \textbf{18}, 1196--1203 (2021).
-\item Cui, H. et al. scGPT: toward building a foundation model for single-cell multi-omics using generative AI. \textit{Nat. Methods} \textbf{21}, 1470--1480 (2024).
-\item Theodoris, C. V. et al. Transfer learning enables predictions in network biology. \textit{Nature} \textbf{618}, 616--624 (2023).
-\item Roohani, Y., Huang, K. \& Leskovec, J. Predicting transcriptional outcomes of novel multigene perturbations with GEARS. \textit{Nat. Biotechnol.} \textbf{42}, 927--935 (2024).
-\item Lotfollahi, M. et al. Predicting cellular responses to complex perturbations in high-throughput screens. \textit{Mol. Syst. Biol.} \textbf{19}, e11517 (2023).
-\item Novakovsky, G., Dexter, N., Liber, M. W., Wasserman, W. W. \& Buchman, S. Obtaining genetics insights from deep learning via explainable artificial intelligence. \textit{Nat. Rev. Genet.} \textbf{24}, 125--137 (2023).
-\item Eraslan, G., Avsec, \v{Z}., Gagneur, J. \& Theis, F. J. Deep learning: new computational modelling techniques for genomics. \textit{Nat. Rev. Genet.} \textbf{20}, 389--403 (2019).
-\item Ota, N. Central Dogma Transformer: towards mechanism-oriented AI for cellular understanding. Preprint at https://arxiv.org/abs/2601.01089 (2026).
-\item Gilbert, L. A. et al. CRISPR-mediated modular RNA-guided regulation of transcription in eukaryotes. \textit{Cell} \textbf{154}, 442--451 (2013).
-\item Morris, J. A. et al. Discovery of target genes and pathways at GWAS loci by pooled single-cell CRISPR screens. \textit{Science} \textbf{380}, eadh7699 (2023).
-\item Vaswani, A. et al. Attention is all you need. \textit{Adv. Neural Inf. Process. Syst.} \textbf{30} (2017).
-\item Gasperini, M. et al. A genome-wide framework for mapping gene regulation via cellular genetic screens. \textit{Cell} \textbf{176}, 377--390 (2019).
-\item Saleque, S., Kim, J., Rooke, H. M. \& Orkin, S. H. Epigenetic regulation of hematopoietic differentiation by Gfi-1 and Gfi-1b is mediated by the cofactors CoREST and LSD1. \textit{Mol. Cell} \textbf{27}, 562--572 (2007).
-\item Blondel, V. D., Guillaume, J.-L., Lambiotte, R. \& Lefebvre, E. Fast unfolding of communities in large networks. \textit{J. Stat. Mech.} \textbf{2008}, P10008 (2008).
-\item Ashburner, M. et al. Gene ontology: tool for the unification of biology. \textit{Nat. Genet.} \textbf{25}, 25--29 (2000).
-\item Jassal, B. et al. The reactome pathway knowledgebase. \textit{Nucleic Acids Res.} \textbf{48}, D498--D503 (2020).
-\item Kanehisa, M. \& Goto, S. KEGG: Kyoto encyclopedia of genes and genomes. \textit{Nucleic Acids Res.} \textbf{28}, 27--30 (2000).
-\item ENCODE Project Consortium. An integrated encyclopedia of DNA elements in the human genome. \textit{Nature} \textbf{489}, 57--74 (2012).
-\item Avsec, \v{Z}. et al. Advancing regulatory variant effect prediction with AlphaGenome. \textit{Nature} \textbf{649}, 1206--1218 (2026).
-\item Nguyen, E. et al. Sequence modeling and design from molecular to genome scale with Evo. \textit{Science} \textbf{386}, eado9336 (2024).
-\item Dixon, J. R. et al. Topological domains in mammalian genomes identified by analysis of chromatin interactions. \textit{Nature} \textbf{485}, 376--380 (2012).
-\item Avsec, \v{Z}. et al. Base-resolution models of transcription-factor binding reveal soft motif syntax. \textit{Nat. Genet.} \textbf{53}, 354--366 (2021).
-\item Jain, S. \& Wallace, B. C. Attention is not explanation. In \textit{Proc. NAACL-HLT} 3543--3556 (2019).
-\item Wiegreffe, S. \& Pinter, Y. Attention is not not explanation. In \textit{Proc. EMNLP-IJCNLP} 11--20 (2019).
-\item Norman, T. M. et al. Exploring genetic interaction manifolds constructed from rich single-cell phenotypes. \textit{Science} \textbf{365}, 786--793 (2019).
-\item Aibar, S. et al. SCENIC: single-cell regulatory network inference and clustering. \textit{Nat. Methods} \textbf{14}, 1083--1086 (2017).
-\item Kamimoto, K. et al. Dissecting cell identity via network inference and in silico gene perturbation. \textit{Nature} \textbf{614}, 742--751 (2023).
-\item Replogle, J. M. et al. Mapping information-rich genotype-phenotype landscapes with genome-scale Perturb-seq. \textit{Cell} \textbf{185}, 2559--2575 (2022).
-\item Dixit, A. et al. Perturb-Seq: dissecting molecular circuits with scalable single-cell RNA profiling of pooled genetic screens. \textit{Cell} \textbf{167}, 1853--1866 (2016).
-\item Loshchilov, I. \& Hutter, F. Decoupled weight decay regularization. In \textit{Proc. ICLR} (2019).
-\item Kuleshov, M. V. et al. Enrichr: a comprehensive gene set enrichment analysis web server 2016 update. \textit{Nucleic Acids Res.} \textbf{44}, W90--W97 (2016).
-\end{enumerate}
+These directions share a common premise: that biological AI should serve not as an oracle delivering predictions, but as an instrument revealing structure. CDT-II reframes the central question from ``what does the model predict?'' to ``what does the model reveal?'' The regulatory networks governing cellular behavior are real but hidden---distributed across multiple layers of the central dogma that no single experiment can observe simultaneously. By grounding its architecture in the central dogma, CDT-II makes these networks visible, offering biology what the microscope offered four centuries ago: not a replacement for the researcher's eye, but an extension of it.
 
 \section*{Acknowledgements}
-The author thanks the developers of Enformer, the Morris laboratory for making the STING-seq dataset publicly available, and the open-source communities behind PyTorch and related tools. Claude (Anthropic) was used for manuscript proofreading and editing. The author assumes full responsibility for the accuracy and integrity of all content in this manuscript.
+
+The author thanks the developers of Enformer, the Morris laboratory for making the STING-seq dataset publicly available, and the open-source communities behind PyTorch and related tools. Claude (Anthropic) was used for manuscript proofreading and editing.
 
 \section*{Funding}
+
 This work received no external funding.
 
+\section*{Data availability}
+
+The STING-seq v2 dataset is available from GEO under accession GSE171452 [11]. Pre-computed Enformer embeddings, processed training data, and trained model weights are available at \url{https://huggingface.co/datasets/nobusama17/CDT2-data}. ENCODE K562 peak-call datasets are available from the ENCODE portal (\url{https://www.encodeproject.org}).
+
+\section*{Code availability}
+
+CDT-II source code is available at \url{https://github.com/nobusama/CDT2}.
+
 \section*{Author contributions}
+
 N.O. conceived the study, developed the model, performed all analyses, and wrote the manuscript.
 
-\section*{Competing interests}
-The author declares no competing interests.
+\section*{Conflict of Interest}
 
-\newpage
-\section*{Supplementary Information}
+None declared.
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{../figures/supplementary/supp_fig1_encode_robustness.png}
-\caption{\textbf{Supplementary Figure 1: Statistical robustness of ENCODE enrichment.} \textbf{(a)} Circular permutation test ($n = 1{,}000$): observed enrichments (red lines) versus null distributions for \textit{GFI}1\textit{B} across three marks (DNase, CTCF, H3K4me3), confirming robustness against spatial autocorrelation artifacts. \textbf{(b)} Threshold robustness: enrichment odds ratios remain significant across attention thresholds from top 5\% to top 20\%, indicating that results are not dependent on a single arbitrary cutoff.}
-\label{fig:supp_encode}
-\end{figure}
+\begin{thebibliography}{37}
+
+\bibitem{crick1970}
+Crick,F. (1970) Central dogma of molecular biology. \textit{Nature}, \textbf{227}, 561--563.
+
+\bibitem{jumper2021}
+Jumper,J. \textit{et al.} (2021) Highly accurate protein structure prediction with AlphaFold. \textit{Nature}, \textbf{596}, 583--589.
+
+\bibitem{avsec2021enformer}
+Avsec,\v{Z}. \textit{et al.} (2021) Effective gene expression prediction from sequence by integrating long-range interactions. \textit{Nat. Methods}, \textbf{18}, 1196--1203.
+
+\bibitem{cui2024}
+Cui,H. \textit{et al.} (2024) scGPT: toward building a foundation model for single-cell multi-omics using generative AI. \textit{Nat. Methods}, \textbf{21}, 1470--1480.
+
+\bibitem{theodoris2023}
+Theodoris,C.V. \textit{et al.} (2023) Transfer learning enables predictions in network biology. \textit{Nature}, \textbf{618}, 616--624.
+
+\bibitem{novakovsky2023}
+Novakovsky,G. \textit{et al.} (2023) Obtaining genetics insights from deep learning via explainable artificial intelligence. \textit{Nat. Rev. Genet.}, \textbf{24}, 125--137.
+
+\bibitem{eraslan2019}
+Eraslan,G. \textit{et al.} (2019) Deep learning: new computational modelling techniques for genomics. \textit{Nat. Rev. Genet.}, \textbf{20}, 389--403.
+
+\bibitem{ota2026cdtv1}
+Ota,N. (2026) Central Dogma Transformer: towards mechanism-oriented AI for cellular understanding. Preprint at \url{https://arxiv.org/abs/2601.01089}.
+
+\bibitem{gilbert2013}
+Gilbert,L.A. \textit{et al.} (2013) CRISPR-mediated modular RNA-guided regulation of transcription in eukaryotes. \textit{Cell}, \textbf{154}, 442--451.
+
+\bibitem{shalem2014}
+Shalem,O. \textit{et al.} (2014) Genome-scale CRISPR-Cas9 knockout screening in human cells. \textit{Science}, \textbf{343}, 84--87.
+
+\bibitem{morris2023}
+Morris,J.A. \textit{et al.} (2023) Discovery of target genes and pathways at GWAS loci by pooled single-cell CRISPR screens. \textit{Science}, \textbf{380}, eadh7699.
+
+\bibitem{dixit2016}
+Dixit,A. \textit{et al.} (2016) Perturb-Seq: dissecting molecular circuits with scalable single-cell RNA profiling of pooled genetic screens. \textit{Cell}, \textbf{167}, 1853--1866.
+
+\bibitem{gasperini2019}
+Gasperini,M. \textit{et al.} (2019) A genome-wide framework for mapping gene regulation via cellular genetic screens. \textit{Cell}, \textbf{176}, 377--390.
+
+\bibitem{vaswani2017}
+Vaswani,A. \textit{et al.} (2017) Attention is all you need. \textit{Adv. Neural Inf. Process. Syst.}, \textbf{30}.
+
+\bibitem{loshchilov2019}
+Loshchilov,I. and Hutter,F. (2019) Decoupled weight decay regularization. In \textit{Proc. ICLR}.
+
+\bibitem{blondel2008}
+Blondel,V.D. \textit{et al.} (2008) Fast unfolding of communities in large networks. \textit{J. Stat. Mech.}, \textbf{2008}, P10008.
+
+\bibitem{ashburner2000}
+Ashburner,M. \textit{et al.} (2000) Gene ontology: tool for the unification of biology. \textit{Nat. Genet.}, \textbf{25}, 25--29.
+
+\bibitem{kuleshov2016}
+Kuleshov,M.V. \textit{et al.} (2016) Enrichr: a comprehensive gene set enrichment analysis web server 2016 update. \textit{Nucleic Acids Res.}, \textbf{44}, W90--W97.
+
+\bibitem{kanehisa2000}
+Kanehisa,M. and Goto,S. (2000) KEGG: Kyoto encyclopedia of genes and genomes. \textit{Nucleic Acids Res.}, \textbf{28}, 27--30.
+
+\bibitem{jassal2020}
+Jassal,B. \textit{et al.} (2020) The reactome pathway knowledgebase. \textit{Nucleic Acids Res.}, \textbf{48}, D498--D503.
+
+\bibitem{encode2012}
+ENCODE Project Consortium. (2012) An integrated encyclopedia of DNA elements in the human genome. \textit{Nature}, \textbf{489}, 57--74.
+
+\bibitem{saleque2007}
+Saleque,S. \textit{et al.} (2007) Epigenetic regulation of hematopoietic differentiation by Gfi-1 and Gfi-1b is mediated by the cofactors CoREST and LSD1. \textit{Mol. Cell}, \textbf{27}, 562--572.
+
+\bibitem{fulco2019}
+Fulco,C.P. \textit{et al.} (2019) Activity-by-contact model of enhancer--promoter regulation from thousands of CRISPR perturbations. \textit{Nat. Genet.}, \textbf{51}, 1664--1669.
+
+\bibitem{dixon2012}
+Dixon,J.R. \textit{et al.} (2012) Topological domains in mammalian genomes identified by analysis of chromatin interactions. \textit{Nature}, \textbf{485}, 376--380.
+
+\bibitem{avsec2026alphagen}
+Avsec,\v{Z}. \textit{et al.} (2026) Advancing regulatory variant effect prediction with AlphaGenome. \textit{Nature}, \textbf{649}, 1206--1218.
+
+\bibitem{nguyen2024}
+Nguyen,E. \textit{et al.} (2024) Sequence modeling and design from molecular to genome scale with Evo. \textit{Science}, \textbf{386}, eado9336.
+
+\bibitem{avsec2021bpnet}
+Avsec,\v{Z}. \textit{et al.} (2021) Base-resolution models of transcription-factor binding reveal soft motif syntax. \textit{Nat. Genet.}, \textbf{53}, 354--366.
+
+\bibitem{jain2019}
+Jain,S. and Wallace,B.C. (2019) Attention is not explanation. In \textit{Proc. NAACL-HLT}, 3543--3556.
+
+\bibitem{wiegreffe2019}
+Wiegreffe,S. and Pinter,Y. (2019) Attention is not not explanation. In \textit{Proc. EMNLP-IJCNLP}, 11--20.
+
+\bibitem{roohani2024}
+Roohani,Y., Huang,K. and Leskovec,J. (2024) Predicting transcriptional outcomes of novel multigene perturbations with GEARS. \textit{Nat. Biotechnol.}, \textbf{42}, 927--935.
+
+\bibitem{norman2019}
+Norman,T.M. \textit{et al.} (2019) Exploring genetic interaction manifolds constructed from rich single-cell phenotypes. \textit{Science}, \textbf{365}, 786--793.
+
+\bibitem{lotfollahi2023}
+Lotfollahi,M. \textit{et al.} (2023) Predicting cellular responses to complex perturbations in high-throughput screens. \textit{Mol. Syst. Biol.}, \textbf{19}, e11517.
+
+\bibitem{aibar2017}
+Aibar,S. \textit{et al.} (2017) SCENIC: single-cell regulatory network inference and clustering. \textit{Nat. Methods}, \textbf{14}, 1083--1086.
+
+\bibitem{kamimoto2023}
+Kamimoto,K. \textit{et al.} (2023) Dissecting cell identity via network inference and in silico gene perturbation. \textit{Nature}, \textbf{614}, 742--751.
+
+\bibitem{replogle2022}
+Replogle,J.M. \textit{et al.} (2022) Mapping information-rich genotype-phenotype landscapes with genome-scale Perturb-seq. \textit{Cell}, \textbf{185}, 2559--2575.
+
+\bibitem{ogama2023}
+Ogama,Y. \textit{et al.} (2023) Phase 1 clinical trial of PPMX-T003, a novel anti-human transferrin receptor 1 antibody, in healthy volunteers. \textit{Clin. Pharmacol. Drug Dev.}, \textbf{12}, 579--587.
+
+\bibitem{fauzi2025}
+Fauzi,Y.R., Nakahata,S., Shimoda,K. \textit{et al.} (2025) Anti-transferrin receptor antibody (JST-TFR09/PPMX-T003) induces ferroptosis in adult T-cell leukemia/lymphoma cells. \textit{Biochem. Biophys. Res. Commun.}, \textbf{756}, 151564.
+
+\end{thebibliography}
 
 \end{document}
