@@ -260,7 +260,7 @@ Notably, conventional in silico knockdown---setting a gene's expression to zero 
 
 \subsection{TFRC case study: predicting anti-TfR1 antibody effects}
 
-To illustrate the translational potential of gradient analysis, we examined the Jacobian regulatory map for \textit{TFRC} (CD71, transferrin receptor 1), the target of PPMX-T003, an anti-TfR1 monoclonal antibody currently in Phase~1 clinical trials for polycythemia vera [36]. The Jacobian heatmap (Fig.~9) visualizes the regulatory relationships under TFRC perturbation: rows represent the top 100 output genes most affected by TFRC knockdown in the CRISPRi experiment, columns represent the top 50 input genes whose expression most strongly influences the model's predictions, and color intensity indicates the strength of regulatory coupling between each gene pair.
+To illustrate the translational potential of gradient analysis, we examined the Jacobian regulatory map for \textit{TFRC} (CD71, transferrin receptor 1), the target of PPMX-T003, an anti-TfR1 monoclonal antibody currently in Phase~1 clinical trials for polycythemia vera [36]. Because TFRC was held out entirely during training, the model has never observed any TFRC perturbation data---the following regulatory map is a purely computational prediction. The Jacobian heatmap (Fig.~9) visualizes the regulatory relationships under TFRC perturbation: rows represent the top 100 output genes most affected by TFRC knockdown in the CRISPRi experiment, columns represent the top 50 input genes whose expression most strongly influences the model's predictions, and color intensity indicates the strength of regulatory coupling between each gene pair.
 
 Table~1 categorizes all 30 top-ranking input genes by functional pathway. Of the 30 genes, 24 can be linked to known consequences of iron depletion or TfR1 inhibition: oxidative stress and ferroptosis (4 genes), iron-dependent DNA synthesis and repair (3), erythrocyte structure and cytoskeleton (2), immune surface molecules (3), mitochondrial metabolism (2), ER stress and protein homeostasis (5), hematopoietic differentiation (1), vesicle trafficking (1), cell survival signaling (1), and RNA processing (2). The remaining 6 genes involve general transcription and chromatin functions, consistent with the broad growth arrest expected from iron deprivation.
 
@@ -303,7 +303,9 @@ These associations emerge entirely from CDT-II's learned regulatory structure wi
 28 & \textit{RTN4} & ER structure & --- \\
 \midrule
 5 & \textit{HES4} & Hematopoietic differentiation & --- \\
+\midrule
 11 & \textit{RAB10} & Vesicle trafficking (TfR1 recycling) & --- \\
+\midrule
 18 & \textit{CCDC88A} & Cell survival (PI3K-Akt) & --- \\
 \midrule
 2 & \textit{RSRP1} & RNA processing & --- \\
