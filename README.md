@@ -194,6 +194,7 @@ Standard scRNA-seq tools (Scanpy, Seurat) handle steps 1-3. Steps 4-6 are specif
 - Gene filtering by cross-dataset reproducibility improves results (see ablation study: 2,361 filtered genes vs 9,335 unfiltered)
 - Enformer embeddings are cell-type-agnostic — you only need to regenerate them if your target genes differ
 - TSS coordinate file (`data/morris_28genes_tss.csv`) is included in the repository
+- Supplementary Data S1 — full community gene lists from both attention mechanisms (`data/supp_data_S1_community_genes.csv`) — is included in the repository
 
 ### Swapping the DNA Foundation Model
 
