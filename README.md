@@ -6,6 +6,17 @@
 
 Accepted for publication in *Bioinformatics Advances* (Oxford University Press). The manuscript in [`docs/`](docs/) is the accepted version; the DOI will be added here once it is issued.
 
+> ### The CDT series
+> A mechanism-oriented AI program that models the central dogma one layer at a time.
+>
+> | | Layer | Models | Code | Paper |
+> |---|---|---|---|---|
+> | **CDT-I** | Central dogma as architecture | overview | [CDT](https://github.com/nobusama/CDT) | [arXiv:2601.01089](https://arxiv.org/abs/2601.01089) |
+> | **CDT-II** | DNA → RNA | transcription | [CDT2](https://github.com/nobusama/CDT2) | [arXiv:2602.08751](https://arxiv.org/abs/2602.08751)<br>Accepted, *Bioinformatics Advances* |
+> | **CDT-III** | RNA → Protein | translation | [CDT3](https://github.com/nobusama/CDT3) | [arXiv:2603.23361](https://arxiv.org/abs/2603.23361) |
+>
+> The series continues along the central dogma. **You are here → CDT-II**
+
 ## Overview
 
 CDT-II is an "AI microscope" whose attention maps are directly interpretable as regulatory structure. By mirroring the central dogma in its architecture, each attention mechanism corresponds to a specific biological relationship:
